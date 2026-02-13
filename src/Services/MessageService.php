@@ -3,7 +3,6 @@
 namespace Topoff\MailManager\Services;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Topoff\MailManager\Models\Message;
 use Topoff\MailManager\Models\MessageType;
 use Topoff\MailManager\Repositories\MessageTypeRepository;
@@ -92,7 +91,7 @@ class MessageService
         return $this;
     }
 
-    public function setCompanyId(?string $companyId = null): self
+    public function setCompanyId(?int $companyId = null): self
     {
         $this->companyId = $companyId;
 
@@ -129,23 +128,23 @@ class MessageService
     {
         $this->scheduled ??= $this->getScheduled();
 
-        if ($this->checkAllParamsAreSet()) {
-            if (! $this->preventCreateMessage()) {
-                $messageClass = config('mail-manager.models.message');
-                $messageClass::create([
-                    'sender_type' => $this->senderClass,
-                    'sender_id' => $this->senderId,
-                    'receiver_type' => $this->receiverClass,
-                    'receiver_id' => $this->receiverId,
-                    'company_id' => $this->companyId,
-                    'message_type_id' => $this->messageType->id,
-                    'messagable_type' => $this->messagableClass,
-                    'messagable_id' => $this->messagableId,
-                    'params' => $this->params,
-                    'text' => $this->mailText,
-                    'scheduled_at' => $this->scheduled,
-                ]);
-            }
+        $this->reportMissingParams();
+
+        if (! $this->preventCreateMessage()) {
+            $messageClass = config('mail-manager.models.message');
+            $messageClass::create([
+                'sender_type' => $this->senderClass,
+                'sender_id' => $this->senderId,
+                'receiver_type' => $this->receiverClass,
+                'receiver_id' => $this->receiverId,
+                'company_id' => $this->companyId,
+                'message_type_id' => $this->messageType->id,
+                'messagable_type' => $this->messagableClass,
+                'messagable_id' => $this->messagableId,
+                'params' => $this->params,
+                'text' => $this->mailText,
+                'scheduled_at' => $this->scheduled,
+            ]);
         }
 
         $this->resetVars();
@@ -187,7 +186,7 @@ class MessageService
      */
     public function delete(): ?bool
     {
-        $this->checkAllParamsAreSet();
+        $this->reportMissingParams();
 
         $messageClass = config('mail-manager.models.message');
         $result = $messageClass::create([
@@ -233,27 +232,27 @@ class MessageService
     /**
      * Checks if all required params for this mail are set
      */
-    private function checkAllParamsAreSet(): bool
+    private function reportMissingParams(): bool
     {
-        if ($this->messageType->required_messagable && (empty($this->messagableClass) || empty($this->messagableId))) {
+        if ($this->messageType->required_messagable && (in_array($this->messagableClass, [null, '', '0'], true) || ($this->messagableId === null || $this->messagableId === 0))) {
             report(static::class.':'.__FUNCTION__.': The Messagable parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
 
             return false;
         }
 
-        if ($this->messageType->required_sender && (empty($this->senderClass) || empty($this->senderId))) {
+        if ($this->messageType->required_sender && (in_array($this->senderClass, [null, '', '0'], true) || ($this->senderId === null || $this->senderId === 0))) {
             report(static::class.':'.__FUNCTION__.': The Sender parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
 
             return false;
         }
 
-        if ($this->messageType->required_company_id && empty($this->companyId)) {
+        if ($this->messageType->required_company_id && ($this->companyId === null || $this->companyId === 0)) {
             report(static::class.':'.__FUNCTION__.': The CompanyId parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
 
             return false;
         }
 
-        if ($this->messageType->required_mail_text && empty($this->mailText)) {
+        if ($this->messageType->required_mail_text && in_array($this->mailText, [null, '', '0'], true)) {
             report(static::class.':'.__FUNCTION__.': The MailText parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
 
             return false;

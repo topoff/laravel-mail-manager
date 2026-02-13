@@ -26,7 +26,7 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         config()->set('database.default', 'testing');
-        config()->set('mail-manager.database.connection', null);
+        config()->set('mail-manager.database.connection');
     }
 
     protected function setUpDatabase(): void

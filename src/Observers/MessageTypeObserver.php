@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 class MessageTypeObserver
 {
-    private const CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
+    private const string CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
 
     /**
      * Handle the MessageType "created" event.

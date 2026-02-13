@@ -7,7 +7,7 @@ it('can create a message type', function () {
 
     expect($messageType)->toBeInstanceOf(MessageType::class)
         ->and($messageType->id)->toBeInt()
-        ->and($messageType->mail_class)->toBe('Workbench\\App\\Mail\\TestMail')
+        ->and($messageType->mail_class)->toBe(\Workbench\App\Mail\TestMail::class)
         ->and($messageType->direct)->toBe(true)
         ->and($messageType->dev_bcc)->toBe(true);
 });
@@ -20,7 +20,7 @@ it('uses the configured database connection', function () {
 });
 
 it('uses default connection when config is null', function () {
-    config()->set('mail-manager.database.connection', null);
+    config()->set('mail-manager.database.connection');
     $messageType = new MessageType;
 
     expect($messageType->getConnectionName())->toBeNull();

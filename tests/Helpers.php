@@ -10,7 +10,7 @@ use Workbench\App\Models\TestSender;
 function createMessageType(array $attributes = []): MessageType
 {
     return MessageType::create(array_merge([
-        'mail_class' => 'Workbench\\App\\Mail\\TestMail',
+        'mail_class' => \Workbench\App\Mail\TestMail::class,
         'single_mail_handler' => TestMailHandler::class,
         'bulk_mail_handler' => \Topoff\MailManager\MailHandler\MainBulkMailHandler::class,
         'direct' => true,

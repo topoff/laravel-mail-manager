@@ -103,6 +103,7 @@ class Message extends Model
         return Attribute::make(get: fn (): string => ($this->created_at) ? Date::make($this->created_at)->isoFormat('LL') : '');
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

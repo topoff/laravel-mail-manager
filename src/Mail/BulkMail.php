@@ -12,14 +12,9 @@ class BulkMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public Collection $messages;
-
     public ?string $url = null;
 
-    public function __construct(protected MessageReceiverInterface $messageReceiver, Collection $messages)
-    {
-        $this->messages = $messages;
-    }
+    public function __construct(protected MessageReceiverInterface $messageReceiver, public Collection $messages) {}
 
     public function build(): static
     {

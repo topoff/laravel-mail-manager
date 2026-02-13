@@ -191,7 +191,7 @@ it('uses check_should_send config callback', function () {
 });
 
 it('defaults to production-only sending when check_should_send is null', function () {
-    config()->set('mail-manager.sending.check_should_send', null);
+    config()->set('mail-manager.sending.check_should_send');
 
     $handler = new MainMailHandler(
         createMessage([
@@ -260,7 +260,5 @@ it('sends mail to the receiver email address', function () {
     $handler = new MainMailHandler($message->load('messageType'));
     $handler->send();
 
-    Mail::assertSent(\Workbench\App\Mail\TestMail::class, function ($mail) {
-        return $mail->hasTo('specific@example.com');
-    });
+    Mail::assertSent(\Workbench\App\Mail\TestMail::class, fn ($mail) => $mail->hasTo('specific@example.com'));
 });

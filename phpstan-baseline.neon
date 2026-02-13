@@ -1,2 +1,97 @@
 parameters:
 	ignoreErrors:
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$bulk_mail_handler\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Jobs/SendMessageJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$message_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Jobs/SendMessageJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$receiver\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Jobs/SendMessageJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$receiver_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Jobs/SendMessageJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$receiver_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Jobs/SendMessageJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$single_mail_handler\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Jobs/SendMessageJob.php
+
+		-
+			message: '#^PHPDoc tag @var with type Illuminate\\Mail\\Message is not subtype of native type Symfony\\Component\\Mime\\Email\.$#'
+			identifier: varTag.nativeType
+			count: 1
+			path: src/Listeners/AddBccToEmailsListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$single_mail_handler\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/MailHandler/MainBulkMailHandler.php
+
+		-
+			message: '#^Access to an undefined property Topoff\\MailManager\\Models\\Message\:\:\$mailHandler\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/MailHandler/MainBulkMailHandler.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$bulk_message_line\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/MailHandler/MainMailHandler.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$mail_class\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/MailHandler/MainMailHandler.php
+
+		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: src/MailHandler/MainMailHandler.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\:\:company\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Models/Message.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\:\:customer\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Models/Message.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\:\:direct\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Models/Message.php
+
+		-
+			message: '#^PHPDoc tag @return with type Illuminate\\Database\\Eloquent\\Model\|Illuminate\\Database\\Eloquent\\Relations\\MorphTo\|Topoff\\MailManager\\Contracts\\MessageReceiverInterface is not subtype of native type Illuminate\\Database\\Eloquent\\Relations\\MorphTo\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: src/Models/Message.php

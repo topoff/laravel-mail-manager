@@ -51,6 +51,7 @@ class MessageType extends Model
         return $query->where('customer', false);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

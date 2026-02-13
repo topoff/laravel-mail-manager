@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 it('sets the default subject from message count', function () {
-    config()->set('mail-manager.mail.bulk_mail_subject', null);
+    config()->set('mail-manager.mail.bulk_mail_subject');
 
     $messages = collect([
         createMessage([
@@ -74,7 +74,7 @@ it('sets url from config resolver', function () {
 });
 
 it('url is null when no resolver is configured', function () {
-    config()->set('mail-manager.mail.bulk_mail_url', null);
+    config()->set('mail-manager.mail.bulk_mail_url');
 
     $messages = collect([
         createMessage([

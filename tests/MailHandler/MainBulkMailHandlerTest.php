@@ -39,9 +39,7 @@ it('sends a bulk mail to the receiver', function () {
     $handler = new MainBulkMailHandler($this->receiver, $messages);
     $handler->send();
 
-    Mail::assertSent(BulkMail::class, function (BulkMail $mail) {
-        return $mail->hasTo($this->receiver->email);
-    });
+    Mail::assertSent(BulkMail::class, fn (BulkMail $mail) => $mail->hasTo($this->receiver->email));
 });
 
 it('sets all messages to reserved before sending', function () {
@@ -134,7 +132,7 @@ it('uses the configured bulk mail class', function () {
 });
 
 it('throws when no bulk mail class is configured', function () {
-    config()->set('mail-manager.mail.default_bulk_mail_class', null);
+    config()->set('mail-manager.mail.default_bulk_mail_class');
 
     $handler = new MainBulkMailHandler($this->receiver, collect());
 
