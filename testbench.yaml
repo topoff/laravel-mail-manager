@@ -1,0 +1,10 @@
+providers:
+  - Workbench\App\Providers\WorkbenchServiceProvider
+
+workbench:
+  start: /
+  discovers:
+    web: false
+    api: false
+    commands: false
+    views: true
