@@ -52,6 +52,12 @@ class MessageTypeObserver
      */
     private function clearCachedMessageTypes(): void
     {
-        Cache::tags([config('mail-manager.cache.tag')])->flush();
+        $store = Cache::getStore();
+
+        if ($store instanceof \Illuminate\Cache\TaggableStore) {
+            Cache::tags([config('mail-manager.cache.tag')])->flush();
+        } else {
+            Cache::flush();
+        }
     }
 }

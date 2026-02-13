@@ -12,12 +12,13 @@ class BulkMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public Collection $messageGroup;
+    public Collection $messages;
+
     public ?string $url = null;
 
-    public function __construct(protected MessageReceiverInterface $messageReceiver, Collection $messageGroup)
+    public function __construct(protected MessageReceiverInterface $messageReceiver, Collection $messages)
     {
-        $this->messageGroup = $messageGroup;
+        $this->messages = $messages;
     }
 
     public function build(): static
@@ -29,9 +30,9 @@ class BulkMail extends Mailable
 
         $subjectResolver = config('mail-manager.mail.bulk_mail_subject');
         if (is_callable($subjectResolver)) {
-            $this->subject($subjectResolver($this->messageReceiver, $this->messageGroup));
+            $this->subject($subjectResolver($this->messageReceiver, $this->messages));
         } else {
-            $this->subject($this->messageGroup->count().' messages');
+            $this->subject($this->messages->count().' messages');
         }
 
         $view = config('mail-manager.mail.bulk_mail_view', 'mail-manager::bulkMail');

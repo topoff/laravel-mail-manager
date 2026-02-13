@@ -22,7 +22,7 @@ return [
         'bulk_mail_view' => 'mail-manager::bulkMail',
 
         // Callable or null. Resolves the subject line for bulk mails.
-        // Signature: fn(MessageReceiverInterface $receiver, Collection $messageGroup): string
+        // Signature: fn(MessageReceiverInterface $receiver, Collection $messages): string
         'bulk_mail_subject' => null,
 
         // Callable or null. Resolves the URL shown in bulk mails.

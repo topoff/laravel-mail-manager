@@ -1,7 +1,7 @@
 @component('mail::message')
-# {{ $messageGroup->count() }} {{ Str::plural('Message', $messageGroup->count()) }}
+# {{ $messages->count() }} {{ Str::plural('Message', $messages->count()) }}
 
-@foreach($messageGroup as $message)
+@foreach($messages as $message)
 - {{ $message->mailHandler->buildDataBulkMail() }} — {{ $message->dateFormated }}
 @endforeach
 

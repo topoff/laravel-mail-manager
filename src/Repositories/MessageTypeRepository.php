@@ -2,6 +2,7 @@
 
 namespace Topoff\MailManager\Repositories;
 
+use Illuminate\Cache\TaggableStore;
 use Illuminate\Support\Facades\Cache;
 use Topoff\MailManager\Models\MessageType;
 
@@ -14,9 +15,8 @@ class MessageTypeRepository
     {
         $messageTypeClass = config('mail-manager.models.message_type');
 
-        return Cache::tags(config('mail-manager.cache.tag'))->remember(
+        return $this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
-            config('mail-manager.cache.ttl'),
             fn () => $messageTypeClass::where('mail_class', $type)->select('id')->first()->id
         );
     }
@@ -28,9 +28,8 @@ class MessageTypeRepository
     {
         $messageTypeClass = config('mail-manager.models.message_type');
 
-        return Cache::tags(config('mail-manager.cache.tag'))->remember(
+        return $this->remember(
             static::class.':'.__FUNCTION__.':'.$type,
-            config('mail-manager.cache.ttl'),
             fn () => $messageTypeClass::where('mail_class', $type)->first()
         );
     }
@@ -42,10 +41,21 @@ class MessageTypeRepository
     {
         $messageTypeClass = config('mail-manager.models.message_type');
 
-        return Cache::tags(config('mail-manager.cache.tag'))->remember(
+        return $this->remember(
             static::class.':'.__FUNCTION__.':'.$id,
-            config('mail-manager.cache.ttl'),
             fn () => $messageTypeClass::where('id', $id)->first()
         );
+    }
+
+    protected function remember(string $key, \Closure $callback): mixed
+    {
+        $ttl = config('mail-manager.cache.ttl');
+        $store = Cache::getStore();
+
+        if ($store instanceof TaggableStore) {
+            return Cache::tags(config('mail-manager.cache.tag'))->remember($key, $ttl, $callback);
+        }
+
+        return Cache::remember($key, $ttl, $callback);
     }
 }
