@@ -131,7 +131,7 @@ class MessageService
 
         $this->checkAllParamsAreSet();
 
-        if ($this->shouldCreateMessage()) {
+        if (! $this->preventCreateMessage()) {
             $messageClass = config('mail-manager.models.message');
             $messageClass::create([
                 'sender_type' => $this->senderClass,
@@ -208,11 +208,18 @@ class MessageService
     }
 
     /**
-     * Override in app to determine if a message should be created.
+     * Determine if a message creation should be prevented.
+     * Configurable via config('mail-manager.sending.prevent_create_message').
      */
-    protected function shouldCreateMessage(): bool
+    protected function preventCreateMessage(): bool
     {
-        return true;
+        $checker = config('mail-manager.sending.prevent_create_message');
+
+        if (is_callable($checker)) {
+            return $checker($this->receiverClass, $this->receiverId);
+        }
+
+        return false;
     }
 
     /**

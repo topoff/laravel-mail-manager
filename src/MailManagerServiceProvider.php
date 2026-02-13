@@ -14,6 +14,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-mail-manager')
             ->hasConfigFile()
+            ->hasViews()
             ->discoversMigrations();
     }
 
