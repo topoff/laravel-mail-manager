@@ -129,23 +129,23 @@ class MessageService
     {
         $this->scheduled ??= $this->getScheduled();
 
-        $this->checkAllParamsAreSet();
-
-        if (! $this->preventCreateMessage()) {
-            $messageClass = config('mail-manager.models.message');
-            $messageClass::create([
-                'sender_type' => $this->senderClass,
-                'sender_id' => $this->senderId,
-                'receiver_type' => $this->receiverClass,
-                'receiver_id' => $this->receiverId,
-                'company_id' => $this->companyId,
-                'message_type_id' => $this->messageType->id,
-                'messagable_type' => $this->messagableClass,
-                'messagable_id' => $this->messagableId,
-                'params' => $this->params,
-                'text' => $this->mailText,
-                'scheduled_at' => $this->scheduled,
-            ]);
+        if ($this->checkAllParamsAreSet()) {
+            if (! $this->preventCreateMessage()) {
+                $messageClass = config('mail-manager.models.message');
+                $messageClass::create([
+                    'sender_type' => $this->senderClass,
+                    'sender_id' => $this->senderId,
+                    'receiver_type' => $this->receiverClass,
+                    'receiver_id' => $this->receiverId,
+                    'company_id' => $this->companyId,
+                    'message_type_id' => $this->messageType->id,
+                    'messagable_type' => $this->messagableClass,
+                    'messagable_id' => $this->messagableId,
+                    'params' => $this->params,
+                    'text' => $this->mailText,
+                    'scheduled_at' => $this->scheduled,
+                ]);
+            }
         }
 
         $this->resetVars();

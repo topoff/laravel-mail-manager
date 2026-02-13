@@ -2,8 +2,11 @@
 
 namespace Topoff\MailManager;
 
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Support\Facades\Event;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Topoff\MailManager\Listeners\AddBccToEmailsListener;
 use Topoff\MailManager\Observers\MessageTypeObserver;
 use Topoff\MailManager\Repositories\MessageTypeRepository;
 
@@ -27,5 +30,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
     {
         $messageTypeClass = config('mail-manager.models.message_type');
         $messageTypeClass::observe(MessageTypeObserver::class);
+
+        Event::listen(MessageSending::class, AddBccToEmailsListener::class);
     }
 }

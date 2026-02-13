@@ -4,6 +4,7 @@ namespace Topoff\MailManager\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -19,6 +20,8 @@ use Topoff\MailManager\Models\Message;
 class SendMessageJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    protected int $chunkSize = 250;
 
     /**
      * The number of times the job may be attempted.
@@ -55,6 +58,60 @@ class SendMessageJob implements ShouldQueue
         return config('mail-manager.models.message');
     }
 
+    protected function messageTypeModel(): string
+    {
+        return config('mail-manager.models.message_type');
+    }
+
+    protected function messageTable(): string
+    {
+        $messageClass = $this->messageModel();
+
+        return (new $messageClass)->getTable();
+    }
+
+    protected function messageTypeTable(): string
+    {
+        $messageTypeClass = $this->messageTypeModel();
+
+        return (new $messageTypeClass)->getTable();
+    }
+
+    protected function throttleForStaging(): void
+    {
+        if (App::environment('staging')) {
+            Sleep::sleep(1); // we can't send too many emails to mailtrap.io - 10 emails / 10 seconds
+        }
+    }
+
+    protected function applyRetryWindowConstraint(Builder $query): Builder
+    {
+        $messageClass = $this->messageModel();
+        $messageTable = $this->messageTable();
+        $messageTypeTable = $this->messageTypeTable();
+        $driver = (new $messageClass)->getConnection()->getDriverName();
+        $now = Date::now()->toDateTimeString();
+
+        return match ($driver) {
+            'sqlite' => $query->whereRaw(
+                "$messageTable.created_at > datetime(?, '-' || $messageTypeTable.error_stop_send_minutes || ' minutes')",
+                [$now]
+            ),
+            'pgsql' => $query->whereRaw(
+                "$messageTable.created_at > (?::timestamp - ($messageTypeTable.error_stop_send_minutes || ' minutes')::interval)",
+                [$now]
+            ),
+            'sqlsrv' => $query->whereRaw(
+                "$messageTable.created_at > DATEADD(minute, -$messageTypeTable.error_stop_send_minutes, ?)",
+                [$now]
+            ),
+            default => $query->whereRaw(
+                "$messageTable.created_at > DATE_SUB(?, INTERVAL $messageTypeTable.error_stop_send_minutes MINUTE)",
+                [$now]
+            ),
+        };
+    }
+
     /**
      * Call the MailHandler for a single message
      */
@@ -71,22 +128,19 @@ class SendMessageJob implements ShouldQueue
     protected function sendDirectMessages(): void
     {
         $messageClass = $this->messageModel();
-        $directMessages =
-            $messageClass::with('messageType')
-                ->has('directMessageTypes')
-                ->whereNull('sent_at')
-                ->whereNull('reserved_at')
-                ->whereNull('error_at')
-                ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '<', Date::now()))
-                ->get();
-
-        foreach ($directMessages as $message) {
-            $this->callMailHandlerWithSingleMessage($message);
-
-            if (App::environment('staging')) {
-                Sleep::sleep(1); // we can't send too many emails to mailtrap.io - 10 emails / 10 seconds
-            }
-        }
+        $messageClass::with('messageType')
+            ->has('directMessageTypes')
+            ->whereNull('sent_at')
+            ->whereNull('reserved_at')
+            ->whereNull('error_at')
+            ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '<', Date::now()))
+            ->orderBy('id')
+            ->chunkById($this->chunkSize, function (Collection $directMessages): void {
+                foreach ($directMessages as $message) {
+                    $this->callMailHandlerWithSingleMessage($message);
+                    $this->throttleForStaging();
+                }
+            });
     }
 
     /**
@@ -96,18 +150,54 @@ class SendMessageJob implements ShouldQueue
     protected function retryDirectMessages(): void
     {
         $messageClass = $this->messageModel();
-        $directMessages =
-            $messageClass::with('messageType')
-                ->select('messages.*') // necessary because of join, otherwise it overwrites the id with the id from message_types
-                ->join('message_types', 'messages.message_type_id', '=', 'message_types.id')
-                ->has('directMessageTypes')
-                ->whereNull('sent_at')
-                ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '<', Date::now()))
-                ->where(fn ($query) => $query->whereNull('reserved_at')->orWhere('reserved_at', '<', Date::now()->subHour()))
-                ->where(fn ($query) => $query->whereNull('error_at')->orWhere('error_at', '<', Date::now()->subHour()))
-                ->whereRaw('messages.created_at > DATE_SUB(NOW(), INTERVAL message_types.error_stop_send_minutes MINUTE)');
+        $messageTable = $this->messageTable();
+        $messageTypeTable = $this->messageTypeTable();
 
-        $directMessages->get()->each(fn (Message $message) => $this->callMailHandlerWithSingleMessage($message));
+        $query = $messageClass::with('messageType')
+            ->select("$messageTable.*") // necessary because of join, otherwise it overwrites the id with the id from message_types
+            ->join($messageTypeTable, "$messageTable.message_type_id", '=', "$messageTypeTable.id")
+            ->has('directMessageTypes')
+            ->whereNull("$messageTable.sent_at")
+            ->where(fn ($query) => $query->whereNull("$messageTable.scheduled_at")->orWhere("$messageTable.scheduled_at", '<', Date::now()))
+            ->where(fn ($query) => $query->whereNull("$messageTable.reserved_at")->orWhere("$messageTable.reserved_at", '<', Date::now()->subHour()))
+            ->where(fn ($query) => $query->whereNull("$messageTable.error_at")->orWhere("$messageTable.error_at", '<', Date::now()->subHour()))
+            ->orderBy("$messageTable.id");
+
+        $this->applyRetryWindowConstraint($query)
+            ->chunkById($this->chunkSize, function (Collection $directMessages): void {
+                $directMessages->each(fn (Message $message) => $this->callMailHandlerWithSingleMessage($message));
+            }, "$messageTable.id", 'id');
+    }
+
+    protected function buildIndirectMessagesQuery(bool $withMessageType = true): Builder
+    {
+        $messageClass = $this->messageModel();
+        $messageTable = $this->messageTable();
+        $messageTypeTable = $this->messageTypeTable();
+
+        $query = $messageClass::query()
+            ->select("$messageTable.*")
+            ->leftJoin($messageTypeTable, "$messageTable.message_type_id", '=', "$messageTypeTable.id")
+            ->where(fn (Builder $query) => $query->where("$messageTypeTable.direct", false)->orWhereNull("$messageTypeTable.direct"))
+            ->whereNull("$messageTable.sent_at");
+
+        if ($withMessageType) {
+            $query->with('messageType');
+        }
+
+        if ($this->isRetryCallForMessagesWithError) {
+            $query
+                ->where(fn ($query) => $query->whereNull("$messageTable.scheduled_at")->orWhere("$messageTable.scheduled_at", '<', Date::now()))
+                ->where(fn ($query) => $query->whereNull("$messageTable.reserved_at")->orWhere("$messageTable.reserved_at", '<', Date::now()->subHour()))
+                ->where(fn ($query) => $query->whereNull("$messageTable.error_at")->orWhere("$messageTable.error_at", '<', Date::now()->subHour()));
+
+            return $this->applyRetryWindowConstraint($query);
+        }
+
+        return $query
+            ->whereNull("$messageTable.reserved_at")
+            ->whereNull("$messageTable.error_at")
+            ->where(fn ($query) => $query->whereNull("$messageTable.scheduled_at")->orWhere("$messageTable.scheduled_at", '<', Date::now()));
     }
 
     /**
@@ -116,78 +206,51 @@ class SendMessageJob implements ShouldQueue
      */
     protected function sendIndirectMessages(): void
     {
-        $messageClass = $this->messageModel();
+        $messageTable = $this->messageTable();
+        $messageTypeTable = $this->messageTypeTable();
 
-        /**
-         * Data Structure:
-         * Collection(
-         *          ['User::class' => Collection(
-         *              ['783' => Collection(
-         *                  ['MainBulkMailHandler' => Collection(
-         *                      [1 => Collection(
-         *                          [0 => Message(),
-         *                           1 => Message(),
-         *                           2 => Message(),
-         *                           3 => Message(),
-         *                      ]
-         *                  ]
-         *              ]
-         *          ],
-         *          ['Employee::class' => Collection(
-         *              ['113' => Collection(
-         *                  ['MainBulkMailHandler' => Collection(
-         *                      [1 => Collection(
-         *                          [0 => Message(),
-         *                           1 => Message(),
-         *                      ]
-         *                  ]
-         *              ]
-         *          ]
-         */
-        if ($this->isRetryCallForMessagesWithError) {
-            $individual =
-                $messageClass::select('messages.*') // necessary because of join, otherwise it overwrites the id with the id from message_types
-                    ->join('message_types', 'messages.message_type_id', '=', 'message_types.id')
-                    ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '<', Date::now()))
-                    ->where(fn ($query) => $query->whereNull('reserved_at')->orWhere('reserved_at', '<', Date::now()->subHour()))
-                    ->where(fn ($query) => $query->whereNull('error_at')->orWhere('error_at', '<', Date::now()->subHour()))
-                    ->whereRaw('messages.created_at > DATE_SUB(NOW(), INTERVAL message_types.error_stop_send_minutes MINUTE)');
-        } else {
-            $individual =
-                $messageClass::whereNull('reserved_at')
-                    ->whereNull('error_at')
-                    ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '<', Date::now()));
+        $groupsQuery = $this->buildIndirectMessagesQuery(false)
+            ->select([
+                "$messageTable.receiver_type",
+                "$messageTable.receiver_id",
+                "$messageTypeTable.bulk_mail_handler",
+            ])
+            ->selectRaw('COUNT(*) as message_count')
+            ->groupBy("$messageTable.receiver_type", "$messageTable.receiver_id", "$messageTypeTable.bulk_mail_handler")
+            ->orderBy("$messageTable.receiver_type")
+            ->orderBy("$messageTable.receiver_id");
+
+        foreach ($groupsQuery->cursor() as $group) {
+            $messageGroupQuery = $this->buildIndirectMessagesQuery(true)
+                ->where("$messageTable.receiver_type", $group->receiver_type)
+                ->where("$messageTable.receiver_id", $group->receiver_id);
+
+            if ($group->bulk_mail_handler) {
+                $messageGroupQuery->where("$messageTypeTable.bulk_mail_handler", $group->bulk_mail_handler);
+            } else {
+                $messageGroupQuery->whereNull("$messageTypeTable.bulk_mail_handler");
+            }
+
+            $messageGroup = $messageGroupQuery->get();
+
+            if ($messageGroup->isEmpty()) {
+                continue;
+            }
+
+            if ($group->bulk_mail_handler && $group->receiver_id && (int) $group->message_count > 1) {
+                // in case an account meanwhile is deleted
+                if (! $messageGroup->first()->receiver) {
+                    $messageGroup->each(fn (Message $message) => $message->delete());
+                } else {
+                    /** @var MainBulkMailHandler $bulkMailHandler */
+                    $bulkMailHandler = $group->bulk_mail_handler;
+                    (new $bulkMailHandler($messageGroup->first()->receiver, $messageGroup))->send();
+                }
+            } else {
+                $messageGroup->each(fn (Message $message) => $this->callMailHandlerWithSingleMessage($message));
+            }
+
+            $this->throttleForStaging();
         }
-
-        $messageGroupsGroupedByReceiverType =
-            $individual->with('messageType')
-                ->doesntHave('directMessageTypes')
-                ->whereNull('sent_at')
-                ->get()
-                ->groupBy(['receiver_type', 'receiver_id', 'messageType.bulk_mail_handler']);
-
-        $messageGroupsGroupedByReceiverType->each(function (\Illuminate\Support\Collection $messageGroupsByReceiverId, $receiverType): void {
-            $messageGroupsByReceiverId->each(function (Collection $messageGroupsByBulkMailHandler, $receiverId): void {
-                $messageGroupsByBulkMailHandler->each(function (Collection $messageGroup, $bulkMailHandler) use ($receiverId): void {
-                    if ($bulkMailHandler && $receiverId && $messageGroup->count() > 1) {
-                        // in case an account meanwhile is deleted
-                        if (! $messageGroup->first()->receiver) {
-                            $messageGroup->each(function (Message $message): void {
-                                $message->delete();
-                            });
-                        } else {
-                            /** @var MainBulkMailHandler $bulkMailHandler */
-                            (new $bulkMailHandler($messageGroup->first()->receiver, $messageGroup))->send();
-                        }
-                    } else {
-                        $messageGroup->each(fn (Message $message) => $this->callMailHandlerWithSingleMessage($message));
-                    }
-
-                    if (App::environment('staging')) {
-                        Sleep::sleep(1); // we can't send too many emails to mailtrip.io - 10 emails / 10 seconds
-                    }
-                });
-            });
-        });
     }
 }

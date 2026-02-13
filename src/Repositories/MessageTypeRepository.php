@@ -8,6 +8,8 @@ use Topoff\MailManager\Models\MessageType;
 
 class MessageTypeRepository
 {
+    private const CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
+
     /**
      * Get the MessageType ID by a type
      */
@@ -50,12 +52,23 @@ class MessageTypeRepository
     protected function remember(string $key, \Closure $callback): mixed
     {
         $ttl = config('mail-manager.cache.ttl');
+        $prefixedKey = $this->cacheKey($key);
         $store = Cache::getStore();
 
         if ($store instanceof TaggableStore) {
-            return Cache::tags(config('mail-manager.cache.tag'))->remember($key, $ttl, $callback);
+            return Cache::tags(config('mail-manager.cache.tag'))->remember($prefixedKey, $ttl, $callback);
         }
 
-        return Cache::remember($key, $ttl, $callback);
+        return Cache::remember($prefixedKey, $ttl, $callback);
+    }
+
+    protected function cacheKey(string $key): string
+    {
+        return 'mail-manager:message-types:v'.$this->cacheVersion().':'.$key;
+    }
+
+    protected function cacheVersion(): int
+    {
+        return (int) Cache::get(self::CACHE_VERSION_KEY, 1);
     }
 }

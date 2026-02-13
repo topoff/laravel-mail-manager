@@ -128,11 +128,29 @@ it('sends scheduled messages that are due', function () {
 });
 
 it('retries error messages when isRetryCall is true', function () {
-    // This test uses MySQL-specific SQL (DATE_SUB with INTERVAL), so it only works with MySQL
-    // Skip on SQLite
-    if (config('database.default') === 'testing') {
-        $this->markTestSkipped('Retry uses MySQL-specific SQL (DATE_SUB).');
-    }
+    Date::setTestNow('2025-06-15 12:00:00');
+
+    $messageType = createMessageType([
+        'direct' => true,
+        'error_stop_send_minutes' => 60 * 24,
+    ]);
+
+    createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+        'error_at' => now()->subHours(2),
+        'reserved_at' => now()->subHours(2),
+        'scheduled_at' => now()->subHours(1),
+        'created_at' => now()->subMinutes(30),
+    ]);
+
+    $job = new SendMessageJob(true);
+    $job->handle();
+
+    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
 });
 
 it('sends indirect messages as single when only one message per group', function () {
