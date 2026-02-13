@@ -1,0 +1,288 @@
+<?php
+
+namespace Topoff\MailManager\Services;
+
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Topoff\MailManager\Models\Message;
+use Topoff\MailManager\Models\MessageType;
+use Topoff\MailManager\Repositories\MessageTypeRepository;
+
+/**
+ * One of these functions are necessary to be called at least: create(), changeScheduleOfExisting() or delete()
+ */
+class MessageService
+{
+    protected MessageTypeRepository $messageTypeRepository;
+
+    protected ?string $senderClass = null;
+
+    protected ?int $senderId = null;
+
+    protected ?string $receiverClass = null;
+
+    protected ?int $receiverId = null;
+
+    protected ?string $messagableClass = null;
+
+    protected ?int $messagableId = null;
+
+    protected ?string $messageTypeClass = null;
+
+    protected ?MessageType $messageType = null;
+
+    protected ?int $companyId = null;
+
+    protected ?Carbon $scheduled = null;
+
+    protected ?string $mailText = null;
+
+    protected ?array $params = null;
+
+    /**
+     * Initialized as false, when a receiver is set it is set to true
+     * that it can be warned if it's initialized but not an action executed
+     */
+    protected bool $actionMissing = false;
+
+    public function __construct()
+    {
+        $this->messageTypeRepository = app(MessageTypeRepository::class);
+    }
+
+    public function __destruct()
+    {
+        if ($this->actionMissing) {
+            report(static::class.':'.__FUNCTION__.': Has not made a call to create(), change() or delete(), one of them is necessary to take any action.');
+        }
+    }
+
+    public function setSender(?string $senderClass = null, ?int $senderId = null): self
+    {
+        $this->senderClass = $senderClass;
+        $this->senderId = $senderId;
+
+        return $this;
+    }
+
+    public function setReceiver(?string $receiverClass = null, ?int $receiverId = null): self
+    {
+        $this->actionMissing = true;
+
+        $this->receiverClass = $receiverClass;
+        $this->receiverId = $receiverId;
+
+        return $this;
+    }
+
+    public function setMessagable(?string $messagableClass = null, ?int $messagableId = null): self
+    {
+        $this->messagableClass = $messagableClass;
+        $this->messagableId = $messagableId;
+
+        return $this;
+    }
+
+    public function setMessageTypeClass(?string $messageTypeClass = null): self
+    {
+        $this->messageTypeClass = $messageTypeClass;
+
+        $this->messageType = $this->messageTypeRepository->getFromTypeAndCustomer($this->messageTypeClass);
+
+        return $this;
+    }
+
+    public function setCompanyId(?string $companyId = null): self
+    {
+        $this->companyId = $companyId;
+
+        return $this;
+    }
+
+    public function setScheduled(?Carbon $scheduled = null): self
+    {
+        $this->scheduled = $scheduled;
+
+        return $this;
+    }
+
+    public function setMailText(?string $mailText = null): self
+    {
+        $this->mailText = $mailText;
+
+        return $this;
+    }
+
+    public function setParams(?array $params = null): self
+    {
+        $this->params = $params;
+
+        return $this;
+    }
+
+    /**
+     * Has to be called as last function, eventually creates the new Message DB Record
+     *
+     * One of these functions are necessary: create(), changeScheduleOfExisting() or delete()
+     */
+    public function create(): void
+    {
+        $this->scheduled ??= $this->getScheduled();
+
+        $this->checkAllParamsAreSet();
+
+        if ($this->shouldCreateMessage()) {
+            $messageClass = config('mail-manager.models.message');
+            $messageClass::create([
+                'sender_type' => $this->senderClass,
+                'sender_id' => $this->senderId,
+                'receiver_type' => $this->receiverClass,
+                'receiver_id' => $this->receiverId,
+                'company_id' => $this->companyId,
+                'message_type_id' => $this->messageType->id,
+                'messagable_type' => $this->messagableClass,
+                'messagable_id' => $this->messagableId,
+                'params' => $this->params,
+                'text' => $this->mailText,
+                'scheduled_at' => $this->scheduled,
+            ]);
+        }
+
+        $this->resetVars();
+    }
+
+    /**
+     * Change the scheduling of an existing Message DB Record
+     *
+     * One of these functions are necessary: create(), change() or delete()
+     */
+    public function change(): ?Message
+    {
+        $messageClass = config('mail-manager.models.message');
+        $message = $messageClass::where('receiver_type', $this->receiverClass)->where('receiver_id', $this->receiverId)
+            ->where('company_id', $this->companyId)
+            ->where('message_type_id', $this->messageType->id)
+            ->where('messagable_type', $this->messagableClass)
+            ->where('messagable_id', $this->messagableId)
+            ->where('text', $this->mailText)
+            ->first();
+
+        if ($message) {
+            $message->scheduled_at = $this->scheduled;
+            $message->save();
+
+            $this->resetVars();
+
+            return $message;
+        }
+
+        return null;
+
+    }
+
+    /**
+     * Deletes a message. Mostly if the message case has been deleted, z.B a quote
+     *
+     * One of these functions are necessary: create(), changeScheduleOfExisting() or delete()
+     */
+    public function delete(): ?bool
+    {
+        $this->checkAllParamsAreSet();
+
+        $messageClass = config('mail-manager.models.message');
+        $result = $messageClass::create([
+            'sender_type' => $this->senderClass,
+            'sender_id' => $this->senderId,
+            'receiver_type' => $this->receiverClass,
+            'receiver_id' => $this->receiverId,
+            'company_id' => $this->companyId,
+            'message_type_id' => $this->messageType->id,
+            'messagable_type' => $this->messagableClass,
+            'messagable_id' => $this->messagableId,
+            'sent_at' => null,
+        ])->delete();
+
+        $this->resetVars();
+
+        return $result;
+    }
+
+    /**
+     * Override in app to determine if a message should be created.
+     */
+    protected function shouldCreateMessage(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Override in app to provide custom scheduling logic for specific message types.
+     */
+    protected function getScheduled(): ?Carbon
+    {
+        return null;
+    }
+
+    /**
+     * Checks if all required params for this mail are set
+     */
+    private function checkAllParamsAreSet(): bool
+    {
+        if ($this->messageType->required_messagable && (empty($this->messagableClass) || empty($this->messagableId))) {
+            report(static::class.':'.__FUNCTION__.': The Messagable parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+
+            return false;
+        }
+
+        if ($this->messageType->required_sender && (empty($this->senderClass) || empty($this->senderId))) {
+            report(static::class.':'.__FUNCTION__.': The Sender parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+
+            return false;
+        }
+
+        if ($this->messageType->required_company_id && empty($this->companyId)) {
+            report(static::class.':'.__FUNCTION__.': The CompanyId parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+
+            return false;
+        }
+
+        if ($this->messageType->required_mail_text && empty($this->mailText)) {
+            report(static::class.':'.__FUNCTION__.': The MailText parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+
+            return false;
+        }
+
+        if ($this->messageType->required_scheduled && ! $this->scheduled instanceof Carbon) {
+            report(static::class.':'.__FUNCTION__.': The Scheduled parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+
+            return false;
+        }
+
+        if ($this->messageType->required_params && ($this->params === null || $this->params === [])) {
+            report(static::class.':'.__FUNCTION__.': The Params parameter has been missing, the message has supposedly not been saved to the messages table. MessageType: '.$this->messageTypeClass.' Sender: '.$this->senderClass.' '.$this->senderId.' Receiver: '.$this->receiverClass.' '.$this->receiverId);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     *  Reset the vars to initial state - needed if multiple messages are generated through the same instance of MessageService
+     */
+    private function resetVars(): void
+    {
+        $this->senderClass = null;
+        $this->senderId = null;
+        $this->receiverClass = null;
+        $this->receiverId = null;
+        $this->messagableClass = null;
+        $this->messagableId = null;
+        $this->messageTypeClass = null;
+        $this->companyId = null;
+        $this->scheduled = null;
+        $this->mailText = null;
+        $this->params = null;
+        $this->actionMissing = false;
+    }
+}
