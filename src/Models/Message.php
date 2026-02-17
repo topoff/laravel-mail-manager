@@ -13,6 +13,45 @@ use Illuminate\Support\Facades\Date;
 use Topoff\MailManager\Contracts\MessageReceiverInterface;
 use Topoff\MailManager\Models\Traits\DateScopesTrait;
 
+/**
+ * @property int $id
+ * @property string|null $receiver_type
+ * @property int|null $receiver_id
+ * @property string|null $sender_type
+ * @property int|null $sender_id
+ * @property int|null $company_id
+ * @property int $message_type_id
+ * @property string|null $messagable_type
+ * @property int|null $messagable_id
+ * @property array|null $params
+ * @property string|null $text
+ * @property int|null $attempts
+ * @property int|null $email_error_code
+ * @property string|null $email_error
+ * @property string|null $tracking_hash
+ * @property string|null $tracking_message_id
+ * @property string|null $tracking_sender_name
+ * @property string|null $tracking_sender_email
+ * @property string|null $tracking_recipient_name
+ * @property string|null $tracking_recipient_email
+ * @property string|null $tracking_subject
+ * @property int $tracking_opens
+ * @property int $tracking_clicks
+ * @property array|null $tracking_meta
+ * @property string|null $tracking_content
+ * @property string|null $tracking_content_path
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property \Illuminate\Support\Carbon|null $scheduled_at
+ * @property \Illuminate\Support\Carbon|null $reserved_at
+ * @property \Illuminate\Support\Carbon|null $error_at
+ * @property \Illuminate\Support\Carbon|null $sent_at
+ * @property \Illuminate\Support\Carbon|null $tracking_opened_at
+ * @property \Illuminate\Support\Carbon|null $tracking_clicked_at
+ * @property-read MessageType $messageType
+ * @property-read MessageReceiverInterface|Model|null $receiver
+ */
 class Message extends Model
 {
     use DateScopesTrait, SoftDeletes;
@@ -107,14 +146,27 @@ class Message extends Model
     protected function casts(): array
     {
         return [
-            'user_id' => 'integer',
             'company_id' => 'integer',
-            'email' => 'string',
             'message_type_id' => 'integer',
             'messagable_type' => 'string',
             'messagable_id' => 'integer',
             'params' => 'array',
             'text' => 'string',
+            'attempts' => 'integer',
+            'email_error_code' => 'integer',
+            'email_error' => 'string',
+            'tracking_hash' => 'string',
+            'tracking_message_id' => 'string',
+            'tracking_sender_name' => 'string',
+            'tracking_sender_email' => 'string',
+            'tracking_recipient_name' => 'string',
+            'tracking_recipient_email' => 'string',
+            'tracking_subject' => 'string',
+            'tracking_opens' => 'integer',
+            'tracking_clicks' => 'integer',
+            'tracking_meta' => 'array',
+            'tracking_content' => 'string',
+            'tracking_content_path' => 'string',
             'deleted_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
@@ -122,6 +174,8 @@ class Message extends Model
             'reserved_at' => 'datetime',
             'error_at' => 'datetime',
             'sent_at' => 'datetime',
+            'tracking_opened_at' => 'datetime',
+            'tracking_clicked_at' => 'datetime',
         ];
     }
 }

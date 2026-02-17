@@ -1,0 +1,65 @@
+<?php
+
+namespace Topoff\MailManager\Jobs;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Topoff\MailManager\Events\MessageLinkClickedEvent;
+use Topoff\MailManager\Models\Message;
+
+class RecordLinkClickJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $maxExceptions = 3;
+
+    public function __construct(
+        public Message $message,
+        public string $url,
+        public ?string $ipAddress
+    ) {}
+
+    public function retryUntil(): \Illuminate\Support\Carbon
+    {
+        return now()->addDays(5);
+    }
+
+    public function handle(): void
+    {
+        $connection = $this->message->getConnectionName();
+        $updatedMessage = DB::connection($connection)->transaction(function (): ?Message {
+            /** @var Message|null $message */
+            $message = $this->message->newQuery()
+                ->whereKey($this->message->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if (! $message) {
+                return null;
+            }
+
+            $meta = collect($message->tracking_meta ?: []);
+            $clickedUrls = collect($meta->get('clicked_urls', []));
+            $clickedUrls->put($this->url, ((int) $clickedUrls->get($this->url, 0)) + 1);
+            $meta->put('clicked_urls', $clickedUrls->toArray());
+
+            $message->tracking_clicks = (int) $message->tracking_clicks + 1;
+            $message->tracking_meta = $meta->toArray();
+            $message->save();
+
+            return $message;
+        });
+
+        if (! $updatedMessage) {
+            return;
+        }
+
+        $this->message = $updatedMessage;
+        Event::dispatch(new MessageLinkClickedEvent($updatedMessage, $this->ipAddress, $this->url));
+    }
+}

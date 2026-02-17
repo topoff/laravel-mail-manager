@@ -4,11 +4,10 @@ namespace Topoff\MailManager\Observers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Topoff\MailManager\Repositories\MessageTypeRepository;
 
 class MessageTypeObserver
 {
-    private const string CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
-
     /**
      * Handle the MessageType "created" event.
      */
@@ -59,7 +58,7 @@ class MessageTypeObserver
         if ($store instanceof \Illuminate\Cache\TaggableStore) {
             Cache::tags([config('mail-manager.cache.tag')])->flush();
         } else {
-            Cache::forever(self::CACHE_VERSION_KEY, ((int) Cache::get(self::CACHE_VERSION_KEY, 1)) + 1);
+            Cache::forever(MessageTypeRepository::CACHE_VERSION_KEY, ((int) Cache::get(MessageTypeRepository::CACHE_VERSION_KEY, 1)) + 1);
         }
     }
 }

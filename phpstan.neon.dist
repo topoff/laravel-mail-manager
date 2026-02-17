@@ -4,4 +4,6 @@ includes:
 parameters:
     paths:
         - src
+    excludePaths:
+        - src/Nova/*
     level: 4

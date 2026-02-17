@@ -31,40 +31,16 @@ parameters:
 			path: src/Jobs/SendMessageJob.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$single_mail_handler\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Jobs/SendMessageJob.php
-
-		-
 			message: '#^PHPDoc tag @var with type Illuminate\\Mail\\Message is not subtype of native type Symfony\\Component\\Mime\\Email\.$#'
 			identifier: varTag.nativeType
 			count: 1
 			path: src/Listeners/AddBccToEmailsListener.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$single_mail_handler\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/MailHandler/MainBulkMailHandler.php
-
-		-
 			message: '#^Access to an undefined property Topoff\\MailManager\\Models\\Message\:\:\$mailHandler\.$#'
 			identifier: property.notFound
 			count: 2
 			path: src/MailHandler/MainBulkMailHandler.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$bulk_message_line\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/MailHandler/MainMailHandler.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$mail_class\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/MailHandler/MainMailHandler.php
 
 		-
 			message: '#^Negated boolean expression is always false\.$#'

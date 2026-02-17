@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    protected function getConnection(): ?string
+    public function getConnection(): ?string
     {
         return config('mail-manager.database.connection');
     }
@@ -60,6 +60,20 @@ return new class extends Migration
                 $table->unsignedTinyInteger('attempts')->nullable()->default(0);
                 $table->unsignedSmallInteger('email_error_code')->nullable();
                 $table->string('email_error')->nullable();
+                $table->string('tracking_hash', 64)->nullable()->index();
+                $table->string('tracking_message_id')->nullable()->index();
+                $table->string('tracking_sender_name')->nullable();
+                $table->string('tracking_sender_email')->nullable();
+                $table->string('tracking_recipient_name')->nullable();
+                $table->string('tracking_recipient_email')->nullable();
+                $table->string('tracking_subject')->nullable();
+                $table->unsignedInteger('tracking_opens')->default(0);
+                $table->unsignedInteger('tracking_clicks')->default(0);
+                $table->dateTime('tracking_opened_at')->nullable();
+                $table->dateTime('tracking_clicked_at')->nullable();
+                $table->json('tracking_meta')->nullable();
+                $table->text('tracking_content')->nullable();
+                $table->string('tracking_content_path')->nullable();
                 $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->default(DB::raw('NULL ON UPDATE CURRENT_TIMESTAMP'))->nullable();
                 $table->softDeletes();

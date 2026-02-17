@@ -8,7 +8,7 @@ use Topoff\MailManager\Models\MessageType;
 
 class MessageTypeRepository
 {
-    private const string CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
+    public const string CACHE_VERSION_KEY = 'mail-manager:message-type-repository:version';
 
     /**
      * Get the MessageType ID by a type

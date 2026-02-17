@@ -31,3 +31,10 @@ it('has null defaults for callable configs', function () {
         ->and(config('mail-manager.sending.prevent_create_message'))->toBeNull()
         ->and(config('mail-manager.bcc.check_should_add_bcc'))->toBeNull();
 });
+
+it('has nova tracking defaults configured', function () {
+    expect(config('mail-manager.tracking.nova.enabled'))->toBeTrue()
+        ->and(config('mail-manager.tracking.nova.register_resource'))->toBeFalse()
+        ->and(config('mail-manager.tracking.nova.resource'))->toBe(\Topoff\MailManager\Nova\Resources\Message::class)
+        ->and(config('mail-manager.tracking.nova.preview_route.prefix'))->toBe('email-manager/nova');
+});

@@ -25,6 +25,19 @@ php artisan vendor:publish --tag="mail-manager-config"
 
 Documentation coming soon.
 
+### Nova Integration
+
+If Laravel Nova is installed, the package can auto-register a tracked messages resource with preview and resend actions.
+
+Configuration keys:
+
+- `mail-manager.tracking.nova.enabled`
+- `mail-manager.tracking.nova.register_resource`
+- `mail-manager.tracking.nova.resource`
+- `mail-manager.tracking.nova.preview_route`
+
+The preview action uses a temporary signed URL and the package route `mail-manager.tracking.nova.preview`.
+
 ## Development
 
 ### Code Quality Tools
