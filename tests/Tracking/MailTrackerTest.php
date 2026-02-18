@@ -78,6 +78,31 @@ it('writes tracking message id when message is sent', function () {
     expect($messageModel->tracking_message_id)->toBe('ses-message-id-123');
 });
 
+it('writes tracking message id from transport when ses header is missing', function () {
+    $messageModel = createMessage(['tracking_hash' => 'smtp-hash-123']);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender Name'))
+        ->to(new Address('receiver@example.com', 'Receiver Name'))
+        ->subject('SMTP Tracking Subject')
+        ->text('Plain text');
+
+    $email->getHeaders()->addTextHeader('X-Mailer-Hash', 'smtp-hash-123');
+
+    $symfonySent = new SymfonySentMessage(
+        $email,
+        new Envelope(new Address('sender@example.com'), [new Address('receiver@example.com')])
+    );
+
+    $event = new MessageSent(new IlluminateSentMessage($symfonySent), []);
+
+    app(MailTracker::class)->messageSent($event);
+
+    $messageModel->refresh();
+
+    expect($messageModel->tracking_message_id)->not->toBeNull();
+});
+
 it('applies the same tracking hash to all grouped messages for bulk sends', function () {
     config()->set('mail-manager.tracking.inject_pixel', true);
     config()->set('mail-manager.tracking.track_links', true);
