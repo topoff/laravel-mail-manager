@@ -2,7 +2,6 @@
 
 namespace Topoff\MailManager\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -46,8 +45,7 @@ class MessageType extends Model
     /**
      * Scope a query to only include direct MessageTypes
      */
-    #[Scope]
-    protected function direct(Builder $query): Builder
+    public function scopeDirect(Builder $query): Builder
     {
         return $query->where('direct', true);
     }
@@ -55,8 +53,7 @@ class MessageType extends Model
     /**
      * Scope a query to only include direct MessageTypes
      */
-    #[Scope]
-    protected function customer(Builder $query): Builder
+    public function scopeCustomer(Builder $query): Builder
     {
         return $query->where('customer', true);
     }
@@ -64,8 +61,7 @@ class MessageType extends Model
     /**
      * Scope a query to only include direct MessageTypes
      */
-    #[Scope]
-    protected function company(Builder $query): Builder
+    public function scopeCompany(Builder $query): Builder
     {
         return $query->where('customer', false);
     }
