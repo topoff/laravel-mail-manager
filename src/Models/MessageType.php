@@ -50,22 +50,6 @@ class MessageType extends Model
         return $query->where('direct', true);
     }
 
-    /**
-     * Scope a query to only include direct MessageTypes
-     */
-    public function scopeCustomer(Builder $query): Builder
-    {
-        return $query->where('customer', true);
-    }
-
-    /**
-     * Scope a query to only include direct MessageTypes
-     */
-    public function scopeCompany(Builder $query): Builder
-    {
-        return $query->where('customer', false);
-    }
-
     #[\Override]
     protected function casts(): array
     {

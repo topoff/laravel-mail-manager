@@ -77,22 +77,6 @@ class Message extends Model
         return $this->messageType()->direct();
     }
 
-    /**
-     * Only MessageTypes with @see \Topoff\MailManager\Models\MessageType::scopeCustomer()
-     */
-    public function customerMessageTypes()
-    {
-        return $this->messageType()->customer();
-    }
-
-    /**
-     * Only MessageTypes with @see \Topoff\MailManager\Models\MessageType::scopeCompany()
-     */
-    public function companyMessageTypes()
-    {
-        return $this->messageType()->company();
-    }
-
     public function messagable(): MorphTo
     {
         return $this->morphTo();
