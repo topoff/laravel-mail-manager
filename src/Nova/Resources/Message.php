@@ -60,6 +60,7 @@ class Message extends Resource
             Number::make('Messagable Id', 'messagable_id')->hideFromIndex(),
             KeyValue::make('Params', 'params')->nullable()->hideFromIndex(),
             Textarea::make('Text', 'text')->alwaysShow()->hideFromIndex(),
+            Text::make('Locale', 'locale')->sortable(),
             DateTime::make('Scheduled At', 'scheduled_at')->nullable()->sortable(),
             DateTime::make('Reserved At', 'reserved_at')->nullable()->sortable(),
             DateTime::make('Error At', 'error_at')->nullable()->sortable(),

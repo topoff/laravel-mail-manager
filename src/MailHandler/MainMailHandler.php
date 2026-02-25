@@ -243,7 +243,7 @@ class MainMailHandler implements GroupableMailTypeInterface
 
     protected function receiverLocale(): string
     {
-        return $this->receiver->preferredLocale();
+        return $this->message->locale ?: $this->receiver->preferredLocale();
     }
 
     /**

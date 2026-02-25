@@ -53,6 +53,7 @@ return new class extends Migration
                 $table->unsignedBigInteger('messagable_id');
                 $table->json('params')->nullable();
                 $table->text('text')->nullable();
+                $table->string('locale', 5)->nullable()->index();
                 $table->dateTime('scheduled_at')->nullable();
                 $table->dateTime('reserved_at')->nullable()->index();
                 $table->dateTime('error_at')->nullable()->index();

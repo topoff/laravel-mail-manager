@@ -3,6 +3,7 @@
 namespace Topoff\MailManager\Services;
 
 use Carbon\Carbon;
+use Topoff\MailManager\Contracts\MessageReceiverInterface;
 use Topoff\MailManager\Models\Message;
 use Topoff\MailManager\Models\MessageType;
 use Topoff\MailManager\Repositories\MessageTypeRepository;
@@ -37,6 +38,8 @@ class MessageService
     protected ?string $mailText = null;
 
     protected ?array $params = null;
+
+    protected ?string $locale = null;
 
     /**
      * Initialized as false, when a receiver is set it is set to true
@@ -119,6 +122,18 @@ class MessageService
         return $this;
     }
 
+    public function setLocale(?string $locale = null): self
+    {
+        $this->locale = $locale;
+
+        return $this;
+    }
+
+    public function setLanguage(?string $language = null): self
+    {
+        return $this->setLocale($language);
+    }
+
     /**
      * Has to be called as last function, eventually creates the new Message DB Record
      *
@@ -127,6 +142,7 @@ class MessageService
     public function create(): void
     {
         $this->scheduled ??= $this->getScheduled();
+        $this->locale ??= $this->resolveReceiverLocale();
 
         $this->reportMissingParams();
 
@@ -143,6 +159,7 @@ class MessageService
                 'messagable_id' => $this->messagableId,
                 'params' => $this->params,
                 'text' => $this->mailText,
+                'locale' => $this->locale,
                 'scheduled_at' => $this->scheduled,
             ]);
         }
@@ -186,6 +203,7 @@ class MessageService
      */
     public function delete(): ?bool
     {
+        $this->locale ??= $this->resolveReceiverLocale();
         $this->reportMissingParams();
 
         $messageClass = config('mail-manager.models.message');
@@ -198,6 +216,7 @@ class MessageService
             'message_type_id' => $this->messageType->id,
             'messagable_type' => $this->messagableClass,
             'messagable_id' => $this->messagableId,
+            'locale' => $this->locale,
             'sent_at' => null,
         ])->delete();
 
@@ -273,6 +292,19 @@ class MessageService
         return true;
     }
 
+    protected function resolveReceiverLocale(): ?string
+    {
+        if (! $this->receiverClass || ! $this->receiverId || ! class_exists($this->receiverClass)) {
+            return null;
+        }
+
+        $receiver = $this->receiverClass::query()->find($this->receiverId);
+
+        return $receiver instanceof MessageReceiverInterface
+            ? $receiver->preferredLocale()
+            : null;
+    }
+
     /**
      *  Reset the vars to initial state - needed if multiple messages are generated through the same instance of MessageService
      */
@@ -289,6 +321,7 @@ class MessageService
         $this->scheduled = null;
         $this->mailText = null;
         $this->params = null;
+        $this->locale = null;
         $this->actionMissing = false;
     }
 }

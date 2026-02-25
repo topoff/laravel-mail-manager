@@ -25,6 +25,7 @@ use Topoff\MailManager\Models\Traits\DateScopesTrait;
  * @property int|null $messagable_id
  * @property array|null $params
  * @property string|null $text
+ * @property string|null $locale
  * @property int|null $attempts
  * @property int|null $email_error_code
  * @property string|null $email_error
@@ -119,7 +120,7 @@ class Message extends Model
     }
 
     /**
-     * Get the date in the defined format according to the current language.
+     * Get the date in the defined format according to the current locale.
      */
     protected function dateFormated(): Attribute
     {
@@ -136,6 +137,7 @@ class Message extends Model
             'messagable_id' => 'integer',
             'params' => 'array',
             'text' => 'string',
+            'locale' => 'string',
             'attempts' => 'integer',
             'email_error_code' => 'integer',
             'email_error' => 'string',
