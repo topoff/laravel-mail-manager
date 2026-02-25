@@ -5,6 +5,7 @@ namespace Topoff\MailManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
@@ -16,8 +17,12 @@ use Topoff\MailManager\Http\Controllers\MailTrackingNovaController;
 use Topoff\MailManager\Http\Controllers\MailTrackingSnsController;
 use Topoff\MailManager\Http\Controllers\NovaCustomMessagePreviewController;
 use Topoff\MailManager\Listeners\AddBccToEmailsListener;
+use Topoff\MailManager\Listeners\LogEmailsListener;
+use Topoff\MailManager\Listeners\LogNotificationListener;
+use Topoff\MailManager\Nova\Resources\EmailLog as EmailLogResource;
 use Topoff\MailManager\Nova\Resources\Message;
 use Topoff\MailManager\Nova\Resources\MessageType as MessageTypeResource;
+use Topoff\MailManager\Nova\Resources\NotificationLog as NotificationLogResource;
 use Topoff\MailManager\Observers\MessageTypeObserver;
 use Topoff\MailManager\Repositories\MessageTypeRepository;
 use Topoff\MailManager\Tracking\MailTracker;
@@ -46,6 +51,8 @@ class MailManagerServiceProvider extends PackageServiceProvider
         Event::listen(MessageSending::class, AddBccToEmailsListener::class);
         Event::listen(MessageSending::class, fn (MessageSending $event) => app(MailTracker::class)->messageSending($event));
         Event::listen(MessageSent::class, fn (MessageSent $event) => app(MailTracker::class)->messageSent($event));
+        Event::listen(MessageSent::class, LogEmailsListener::class);
+        Event::listen(NotificationSent::class, LogNotificationListener::class);
 
         $routeConfig = config('mail-manager.tracking.route', []);
         Route::group($routeConfig, function (): void {
@@ -98,7 +105,22 @@ class MailManagerServiceProvider extends PackageServiceProvider
                     MessageTypeResource::$model = $messageTypeModelClass;
                 }
 
-                Nova::resources([$resourceClass, MessageTypeResource::class]);
+                $emailLogModelClass = config('mail-manager.models.email_log');
+                if (is_string($emailLogModelClass) && is_subclass_of($emailLogModelClass, Model::class)) {
+                    EmailLogResource::$model = $emailLogModelClass;
+                }
+
+                $notificationLogModelClass = config('mail-manager.models.notification_log');
+                if (is_string($notificationLogModelClass) && is_subclass_of($notificationLogModelClass, Model::class)) {
+                    NotificationLogResource::$model = $notificationLogModelClass;
+                }
+
+                Nova::resources([
+                    $resourceClass,
+                    MessageTypeResource::class,
+                    EmailLogResource::class,
+                    NotificationLogResource::class,
+                ]);
             }
         }
     }

@@ -14,6 +14,7 @@ use Topoff\MailManager\Models\Message as MessageModel;
 use Topoff\MailManager\Nova\Actions\PreviewMessageInBrowserAction;
 use Topoff\MailManager\Nova\Actions\ResendAsNewMessageAction;
 use Topoff\MailManager\Nova\Actions\ShowRealSentMessageAction;
+use Topoff\MailManager\Nova\Filters\MessagesStatusFilter;
 
 class Message extends Resource
 {
@@ -101,7 +102,9 @@ class Message extends Resource
      */
     public function filters(NovaRequest $request): array
     {
-        return [];
+        return [
+            new MessagesStatusFilter,
+        ];
     }
 
     /**

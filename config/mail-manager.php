@@ -4,10 +4,18 @@ return [
     'models' => [
         'message' => \Topoff\MailManager\Models\Message::class,
         'message_type' => \Topoff\MailManager\Models\MessageType::class,
+        'email_log' => \Topoff\MailManager\Models\EmailLog::class,
+        'notification_log' => \Topoff\MailManager\Models\NotificationLog::class,
     ],
 
     'database' => [
         'connection' => 'mysql',
+    ],
+
+    'logs' => [
+        'connection' => null,
+        'email_log_table' => 'email_log',
+        'notification_log_table' => 'notification_log',
     ],
 
     'cache' => [
