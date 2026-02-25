@@ -13,7 +13,7 @@ return [
     ],
 
     'logs' => [
-        'connection' => null,
+        'connection' => 'mysql',
         'email_log_table' => 'email_log',
         'notification_log_table' => 'notification_log',
     ],
@@ -95,7 +95,7 @@ return [
             'middleware' => ['api'],
         ],
 
-        // Nova integration for browsing/troubleshooting tracked messages.
+        // Nova integration for browsing/troubleshooting messages.
         'nova' => [
             // Set to false to disable package Nova integration.
             'enabled' => true,
