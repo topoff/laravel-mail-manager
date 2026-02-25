@@ -23,6 +23,31 @@ return [
         'ttl' => 60 * 60 * 24 * 30,
     ],
 
+    'cleanup' => [
+        // Null disables deletion. Positive integer = delete records older than X months.
+        'messages_delete_after_months' => null,
+        'email_log_delete_after_months' => null,
+        'notification_log_delete_after_months' => null,
+
+        // Null disables this cleanup. Positive integer = set messages.tracking_content
+        // to null when records are older than X days.
+        'message_tracking_content_null_after_days' => null,
+
+        'schedule' => [
+            // Registers package cleanup job in Laravel scheduler.
+            'enabled' => true,
+
+            // Run every day at 03:17 server time by default.
+            'cron' => '17 3 * * *',
+
+            // Null = default queue.
+            'queue' => null,
+
+            'without_overlapping' => true,
+            'on_one_server' => false,
+        ],
+    ],
+
     'mail' => [
         'default_bulk_mail_class' => \Topoff\MailManager\Mail\BulkMail::class,
 

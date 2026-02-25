@@ -1,0 +1,143 @@
+<?php
+
+namespace Topoff\MailManager\Jobs;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+
+class CleanupMailManagerTablesJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function handle(): void
+    {
+        $this->cleanupTrackingContent();
+        $this->cleanupMessages();
+        $this->cleanupEmailLogs();
+        $this->cleanupNotificationLogs();
+    }
+
+    protected function cleanupTrackingContent(): void
+    {
+        $days = $this->nullableInt(config('mail-manager.cleanup.message_tracking_content_null_after_days'));
+        if ($days === null) {
+            return;
+        }
+
+        $messageModelClass = $this->modelClass('mail-manager.models.message');
+        $query = $this->queryWithTrashed($messageModelClass)
+            ->whereNotNull('tracking_content')
+            ->where('created_at', '<', now()->subDays($days));
+
+        $query->update(['tracking_content' => null]);
+    }
+
+    protected function cleanupMessages(): void
+    {
+        $months = $this->nullableInt(config('mail-manager.cleanup.messages_delete_after_months'));
+        if ($months === null) {
+            return;
+        }
+
+        $messageModelClass = $this->modelClass('mail-manager.models.message');
+        $query = $this->queryWithTrashed($messageModelClass)
+            ->where('created_at', '<', now()->subMonths($months));
+
+        $this->deleteQuery($query, $messageModelClass);
+    }
+
+    protected function cleanupEmailLogs(): void
+    {
+        $months = $this->nullableInt(config('mail-manager.cleanup.email_log_delete_after_months'));
+        if ($months === null) {
+            return;
+        }
+
+        $emailLogModelClass = $this->modelClass('mail-manager.models.email_log');
+        $emailLogModelClass::query()
+            ->where('created_at', '<', now()->subMonths($months))
+            ->delete();
+    }
+
+    protected function cleanupNotificationLogs(): void
+    {
+        $months = $this->nullableInt(config('mail-manager.cleanup.notification_log_delete_after_months'));
+        if ($months === null) {
+            return;
+        }
+
+        $notificationLogModelClass = $this->modelClass('mail-manager.models.notification_log');
+        $notificationLogModelClass::query()
+            ->where('created_at', '<', now()->subMonths($months))
+            ->delete();
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    protected function queryWithTrashed(string $modelClass)
+    {
+        $query = $modelClass::query();
+
+        if ($this->usesSoftDeletes($modelClass) && method_exists($query, 'withTrashed')) {
+            return $query->withTrashed();
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    protected function deleteQuery($query, string $modelClass): void
+    {
+        if ($this->usesSoftDeletes($modelClass) && method_exists($query, 'forceDelete')) {
+            $query->forceDelete();
+
+            return;
+        }
+
+        $query->delete();
+    }
+
+    /**
+     * @return class-string<Model>
+     */
+    protected function modelClass(string $configKey): string
+    {
+        $modelClass = config($configKey);
+
+        if (! is_string($modelClass) || ! class_exists($modelClass) || ! is_a($modelClass, Model::class, true)) {
+            throw new \RuntimeException(sprintf('Invalid model class configured for "%s".', $configKey));
+        }
+
+        return $modelClass;
+    }
+
+    /**
+     * Null or positive integer.
+     */
+    protected function nullableInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $intValue = (int) $value;
+
+        return $intValue > 0 ? $intValue : null;
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    protected function usesSoftDeletes(string $modelClass): bool
+    {
+        return in_array(SoftDeletes::class, class_uses_recursive($modelClass), true);
+    }
+}
