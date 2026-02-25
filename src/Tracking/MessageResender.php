@@ -26,6 +26,7 @@ class MessageResender
             'messagable_id' => $original->messagable_id,
             'params' => $original->params,
             'text' => $original->text,
+            'locale' => $original->locale,
             'scheduled_at' => null,
             'reserved_at' => null,
             'error_at' => null,

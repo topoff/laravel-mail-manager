@@ -2,30 +2,32 @@
 
 namespace Topoff\MailManager\Nova\Actions;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\URL;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Models\Message;
-use Topoff\MailManager\Tracking\MessageResender;
 
-class ResendMessageAction extends Action
+class PreviewMessageInBrowserAction extends Action
 {
-    public $name = 'Resend Tracked Email';
+    use InteractsWithQueue, Queueable;
 
     public function handle(ActionFields $fields, Collection $models): Action|ActionResponse|null
     {
-        $queued = 0;
-        $resender = app(MessageResender::class);
-
         foreach ($models as $message) {
-            /** @var Message $message */
-            $resender->resend($message);
-            $queued++;
+            $previewUrl = URL::temporarySignedRoute(
+                'mail-manager.tracking.nova.preview-message',
+                now()->addMinutes(10),
+                ['message' => $message->id]
+            );
+
+            return Action::openInNewTab($previewUrl);
         }
 
-        return Action::message(sprintf('%d tracked resend(s) queued.', $queued));
+        return null;
     }
 
     /**
