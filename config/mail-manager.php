@@ -141,4 +141,40 @@ return [
         // Optional: restrict SNS notifications to this topic ARN.
         'sns_topic' => null,
     ],
+
+    'ses_sns' => [
+        // Master switch for SES/SNS provisioning helpers.
+        'enabled' => false,
+
+        'aws' => [
+            'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'session_token' => env('AWS_SESSION_TOKEN'),
+            'profile' => env('AWS_PROFILE'),
+
+            // Optional override. When null, fetched via STS GetCallerIdentity.
+            'account_id' => null,
+        ],
+
+        // SES v2 resources managed by this package.
+        'configuration_set' => 'mail-manager-tracking',
+        'event_destination' => 'mail-manager-sns',
+
+        // SNS resources managed by this package.
+        'topic_name' => 'mail-manager-ses-events',
+        'topic_arn' => null,
+
+        // If null, route('mail-manager.tracking.sns') is used.
+        'callback_endpoint' => null,
+
+        // Event types bound to the SES event destination.
+        'event_types' => ['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY'],
+
+        // Automation toggles.
+        'create_topic_if_missing' => true,
+        'create_https_subscription_if_missing' => true,
+        'set_topic_policy' => true,
+        'enable_event_destination' => true,
+    ],
 ];
