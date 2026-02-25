@@ -24,11 +24,12 @@ class ResendAsNewMessageAction extends Action
             /** @var Message $message */
             if ($message->sent_at === null && $message->error_at === null) {
                 $skipped++;
+
                 continue;
             }
 
             $resender->resend($message);
-            if ($message->error_at !== null && $message->sent_at === null){
+            if ($message->error_at !== null && $message->sent_at === null) {
                 $message->delete(); // To avoid duplicate mails, as these with errors are retried over time
             }
             $queued++;

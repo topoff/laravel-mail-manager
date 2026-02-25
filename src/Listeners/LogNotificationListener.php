@@ -29,7 +29,7 @@ class LogNotificationListener implements ShouldQueue
                 'notifyable_id' => Str::limit((string) data_get($notifiable, 'id', ''), 48, ''),
                 'to' => Str::limit((string) $receiver, 100, ''),
                 'type' => Str::limit((string) ($event->notification->type ?? $event->notification::class), 80, ''),
-                'notification_id' => Str::limit((string) ($event->notification->id ?? ''), 48, ''),
+                'notification_id' => Str::limit((string) $event->notification->id, 48, ''),
             ]);
         } catch (Exception) {
             // Intentionally swallow errors: logging should never break notifications.

@@ -6,8 +6,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
@@ -20,6 +20,7 @@ class PreviewMessageTypeInBrowserAction extends Action
     use InteractsWithQueue, Queueable;
 
     public $name = 'Preview MessageType In Browser';
+
     public $confirmButtonText = 'Preview';
 
     public function handle(ActionFields $fields, Collection $models): Action|ActionResponse|null

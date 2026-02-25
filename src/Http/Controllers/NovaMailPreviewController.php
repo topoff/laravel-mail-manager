@@ -18,9 +18,6 @@ class NovaMailPreviewController
         }
 
         $messageType = $resolvedMessage->messageType;
-        if (! $messageType) {
-            throw new NotFoundHttpException('Message type not found for message.');
-        }
 
         $mailClass = (string) $messageType->mail_class;
         if ($mailClass === '' || ! class_exists($mailClass)) {

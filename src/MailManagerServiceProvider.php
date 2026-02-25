@@ -2,8 +2,8 @@
 
 namespace Topoff\MailManager;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Notifications\Events\NotificationSent;

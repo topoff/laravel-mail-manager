@@ -49,18 +49,6 @@ parameters:
 			path: src/MailHandler/MainMailHandler.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\:\:company\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Models/Message.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\:\:customer\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Models/Message.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\:\:direct\(\)\.$#'
 			identifier: method.notFound
 			count: 1

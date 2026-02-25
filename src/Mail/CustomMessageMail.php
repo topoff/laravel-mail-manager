@@ -26,4 +26,3 @@ class CustomMessageMail extends Mailable
             ]);
     }
 }
-

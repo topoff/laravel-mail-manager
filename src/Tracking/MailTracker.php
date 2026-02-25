@@ -188,7 +188,7 @@ class MailTracker
             $messageModel->tracking_subject = $message->getSubject();
             $messageModel->tracking_opens = 0;
             $messageModel->tracking_clicks = 0;
-            $messageModel->tracking_meta = $messageModel->tracking_meta ?? [];
+            $messageModel->tracking_meta ??= [];
 
             if ($mutated && config('mail-manager.tracking.log_content')) {
                 $this->storeOriginalContent($messageModel, $hash, $originalHtml);
