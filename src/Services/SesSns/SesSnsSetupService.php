@@ -6,6 +6,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
+use Throwable;
 
 class SesSnsSetupService
 {
@@ -136,6 +137,68 @@ class SesSnsSetupService
     }
 
     /**
+     * @return array{ok: bool, steps: array<int, array{label: string, ok: bool, details: string}>}
+     */
+    public function teardown(): array
+    {
+        $this->assertFeatureEnabled();
+
+        $steps = [];
+        $topicArn = $this->resolveTopicArn();
+        $endpoint = $this->callbackEndpoint();
+        $configurationSet = $this->configurationSetName();
+        $eventDestination = $this->eventDestinationName();
+
+        if ($topicArn !== '' && $endpoint !== '') {
+            $subscriptionArn = $this->api->findHttpsSubscriptionArn($topicArn, $endpoint);
+            if ($subscriptionArn !== null && $subscriptionArn !== '' && $subscriptionArn !== 'PendingConfirmation') {
+                $this->api->unsubscribe($subscriptionArn);
+                $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Removed: '.$subscriptionArn];
+            } else {
+                $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Nothing to remove.'];
+            }
+        } else {
+            $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Skipped: missing topic or endpoint.'];
+        }
+
+        try {
+            if ($this->api->configurationSetExists($configurationSet)) {
+                $eventDestinationData = $this->api->getEventDestination($configurationSet, $eventDestination);
+                if ($eventDestinationData !== null) {
+                    $this->api->deleteEventDestination($configurationSet, $eventDestination);
+                    $steps[] = ['label' => 'SES event destination', 'ok' => true, 'details' => 'Removed: '.$eventDestination];
+                } else {
+                    $steps[] = ['label' => 'SES event destination', 'ok' => true, 'details' => 'Nothing to remove.'];
+                }
+
+                $this->api->deleteConfigurationSet($configurationSet);
+                $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Removed: '.$configurationSet];
+            } else {
+                $steps[] = ['label' => 'SES event destination', 'ok' => true, 'details' => 'Skipped: configuration set missing.'];
+                $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Nothing to remove.'];
+            }
+        } catch (Throwable $e) {
+            throw new RuntimeException('Failed to remove SES resources: '.$e->getMessage(), previous: $e);
+        }
+
+        if ($topicArn !== '') {
+            try {
+                $this->api->deleteTopic($topicArn);
+                $steps[] = ['label' => 'SNS topic', 'ok' => true, 'details' => 'Removed: '.$topicArn];
+            } catch (Throwable $e) {
+                throw new RuntimeException('Failed to remove SNS topic: '.$e->getMessage(), previous: $e);
+            }
+        } else {
+            $steps[] = ['label' => 'SNS topic', 'ok' => true, 'details' => 'Nothing to remove.'];
+        }
+
+        return [
+            'ok' => true,
+            'steps' => $steps,
+        ];
+    }
+
+    /**
      * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
      */
     protected function ensureTopic(array &$steps): string
@@ -200,13 +263,28 @@ class SesSnsSetupService
             throw new RuntimeException('Callback endpoint is empty. Configure mail-manager.ses_sns.callback_endpoint or APP_URL.');
         }
 
+        if (! $this->isPublicHttpsEndpoint($endpoint)) {
+            throw new RuntimeException(
+                'Callback endpoint is not publicly reachable via HTTPS for AWS SNS: '.$endpoint.
+                '. Use a public HTTPS URL in mail-manager.ses_sns.callback_endpoint or set create_https_subscription_if_missing=false.'
+            );
+        }
+
         if ($this->api->hasHttpsSubscription($topicArn, $endpoint)) {
             $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Already subscribed: '.$endpoint];
 
             return;
         }
 
-        $this->api->subscribeHttps($topicArn, $endpoint);
+        try {
+            $this->api->subscribeHttps($topicArn, $endpoint);
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                'SNS could not subscribe endpoint "'.$endpoint.'". AWS requires a publicly reachable HTTPS endpoint. Original error: '.$e->getMessage(),
+                previous: $e
+            );
+        }
+
         $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Subscription requested: '.$endpoint];
     }
 
@@ -391,5 +469,30 @@ class SesSnsSetupService
         if (! (bool) config('mail-manager.ses_sns.enabled', false)) {
             throw new RuntimeException('mail-manager.ses_sns.enabled is false.');
         }
+    }
+
+    protected function isPublicHttpsEndpoint(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+
+        if ($scheme !== 'https' || $host === '') {
+            return false;
+        }
+
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return false;
+        }
+
+        if (str_ends_with($host, '.test') || str_ends_with($host, '.local') || str_ends_with($host, '.localhost')) {
+            return false;
+        }
+
+        return true;
     }
 }

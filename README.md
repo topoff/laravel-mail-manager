@@ -47,6 +47,7 @@ Then run:
 ```bash
 php artisan mail-manager:ses-sns:setup
 php artisan mail-manager:ses-sns:check
+php artisan mail-manager:ses-sns:teardown --force
 ```
 
 In Nova (`Message Types` resource), use action `Setup SES/SNS Tracking` to run setup and open the status/check page.

@@ -13,6 +13,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
 use Topoff\MailManager\Console\SetupSesSnsTrackingCommand;
+use Topoff\MailManager\Console\TeardownSesSnsTrackingCommand;
 use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 use Topoff\MailManager\Jobs\CleanupMailManagerTablesJob;
 use Topoff\MailManager\Listeners\AddBccToEmailsListener;
@@ -37,6 +38,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasCommand(SetupSesSnsTrackingCommand::class)
             ->hasCommand(CheckSesSnsTrackingCommand::class)
+            ->hasCommand(TeardownSesSnsTrackingCommand::class)
             ->discoversMigrations();
     }
 

@@ -79,6 +79,11 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
 
     public function hasHttpsSubscription(string $topicArn, string $endpoint): bool
     {
+        return $this->findHttpsSubscriptionArn($topicArn, $endpoint) !== null;
+    }
+
+    public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string
+    {
         $nextToken = null;
 
         do {
@@ -90,14 +95,16 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
             $subscriptions = (array) ($result['Subscriptions'] ?? []);
             foreach ($subscriptions as $subscription) {
                 if (($subscription['Protocol'] ?? null) === 'https' && ($subscription['Endpoint'] ?? null) === $endpoint) {
-                    return true;
+                    $arn = (string) ($subscription['SubscriptionArn'] ?? '');
+
+                    return $arn !== '' ? $arn : null;
                 }
             }
 
             $nextToken = $result['NextToken'] ?? null;
         } while ($nextToken);
 
-        return false;
+        return null;
     }
 
     public function subscribeHttps(string $topicArn, string $endpoint): void
@@ -106,6 +113,20 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
             'TopicArn' => $topicArn,
             'Protocol' => 'https',
             'Endpoint' => $endpoint,
+        ]);
+    }
+
+    public function unsubscribe(string $subscriptionArn): void
+    {
+        $this->sns->unsubscribe([
+            'SubscriptionArn' => $subscriptionArn,
+        ]);
+    }
+
+    public function deleteTopic(string $topicArn): void
+    {
+        $this->sns->deleteTopic([
+            'TopicArn' => $topicArn,
         ]);
     }
 
@@ -180,6 +201,21 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
         }
 
         $this->sesV2->updateConfigurationSetEventDestination($payload);
+    }
+
+    public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void
+    {
+        $this->sesV2->deleteConfigurationSetEventDestination([
+            'ConfigurationSetName' => $configurationSetName,
+            'EventDestinationName' => $eventDestinationName,
+        ]);
+    }
+
+    public function deleteConfigurationSet(string $configurationSetName): void
+    {
+        $this->sesV2->deleteConfigurationSet([
+            'ConfigurationSetName' => $configurationSetName,
+        ]);
     }
 
     /**

@@ -19,7 +19,13 @@ interface SesSnsProvisioningApi
 
     public function hasHttpsSubscription(string $topicArn, string $endpoint): bool;
 
+    public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string;
+
     public function subscribeHttps(string $topicArn, string $endpoint): void;
+
+    public function unsubscribe(string $subscriptionArn): void;
+
+    public function deleteTopic(string $topicArn): void;
 
     public function configurationSetExists(string $configurationSetName): bool;
 
@@ -40,5 +46,8 @@ interface SesSnsProvisioningApi
         array $eventTypes,
         bool $enabled = true,
     ): void;
-}
 
+    public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void;
+
+    public function deleteConfigurationSet(string $configurationSetName): void;
+}
