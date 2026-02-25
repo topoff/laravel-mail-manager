@@ -50,7 +50,7 @@ class MainBulkMailHandler
                 /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
                 $mailHandler = (new $message->messageType->single_mail_handler($message));
                 $this->throwExceptionOnMissingInterface($mailHandler);
-                $message->mailHandler = $mailHandler;
+                $message->setRelation('mailHandler', $mailHandler);
             });
 
             $mailClass = $this->mailClass();
@@ -58,9 +58,9 @@ class MainBulkMailHandler
             $this->setMessagesToSent();
 
             $this->messageGroup->each(function (Message $message): void {
-                /** @var MainMailHandler $mailHandler */
-                $mailHandler = $message->mailHandler;
-                $mailHandler->onSuccessfulSent();
+                /** @var MainMailHandler|null $mailHandler */
+                $mailHandler = $message->getRelation('mailHandler');
+                $mailHandler?->onSuccessfulSent();
             });
         } catch (Throwable $t) {
             $this->setMessagesToError();
