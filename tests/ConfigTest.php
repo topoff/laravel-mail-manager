@@ -44,5 +44,6 @@ it('has ses sns setup defaults configured', function () {
         ->and(config('mail-manager.ses_sns.configuration_set'))->toBe('mail-manager-tracking')
         ->and(config('mail-manager.ses_sns.event_destination'))->toBe('mail-manager-sns')
         ->and(config('mail-manager.ses_sns.topic_name'))->toBe('mail-manager-ses-events')
-        ->and(config('mail-manager.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+        ->and(config('mail-manager.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY'])
+        ->and(config('mail-manager.ses_sns.sending.enabled'))->toBeFalse();
 });

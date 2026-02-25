@@ -45,8 +45,10 @@ Enable it in config:
 Then run:
 
 ```bash
-php artisan mail-manager:ses-sns:setup
-php artisan mail-manager:ses-sns:check
+php artisan mail-manager:ses-sns:setup-tracking
+php artisan mail-manager:ses-sns:check-tracking
+php artisan mail-manager:ses-sns:setup-sending
+php artisan mail-manager:ses-sns:check-sending
 php artisan mail-manager:ses-sns:teardown --force
 ```
 

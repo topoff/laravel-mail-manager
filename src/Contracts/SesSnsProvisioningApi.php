@@ -50,4 +50,33 @@ interface SesSnsProvisioningApi
     public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void;
 
     public function deleteConfigurationSet(string $configurationSetName): void;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getEmailIdentity(string $identity): ?array;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function createEmailIdentity(string $identity): array;
+
+    public function putEmailIdentityMailFromAttributes(
+        string $identity,
+        string $mailFromDomain,
+        string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE',
+    ): void;
+
+    public function findHostedZoneIdByDomain(string $domain): ?string;
+
+    /**
+     * @param  array<int, string>  $values
+     */
+    public function upsertRoute53Record(
+        string $hostedZoneId,
+        string $recordName,
+        string $recordType,
+        array $values,
+        int $ttl = 300,
+    ): void;
 }

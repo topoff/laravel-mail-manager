@@ -12,7 +12,9 @@ use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
+use Topoff\MailManager\Console\CheckSesSendingCommand;
 use Topoff\MailManager\Console\SetupSesSnsTrackingCommand;
+use Topoff\MailManager\Console\SetupSesSendingCommand;
 use Topoff\MailManager\Console\TeardownSesSnsTrackingCommand;
 use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 use Topoff\MailManager\Jobs\CleanupMailManagerTablesJob;
@@ -38,6 +40,8 @@ class MailManagerServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasCommand(SetupSesSnsTrackingCommand::class)
             ->hasCommand(CheckSesSnsTrackingCommand::class)
+            ->hasCommand(SetupSesSendingCommand::class)
+            ->hasCommand(CheckSesSendingCommand::class)
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
             ->discoversMigrations();
     }

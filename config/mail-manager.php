@@ -176,5 +176,28 @@ return [
         'create_https_subscription_if_missing' => true,
         'set_topic_policy' => true,
         'enable_event_destination' => true,
+
+        'sending' => [
+            // Master switch for sending setup helpers.
+            'enabled' => false,
+
+            // Set one of these (domain preferred).
+            // Example: 'identity_domain' => 'top-offerten.ch',
+            'identity_domain' => null,
+            // Example: 'identity_email' => 'no-reply@top-offerten.ch',
+            'identity_email' => null,
+
+            // Optional custom MAIL FROM domain (subdomain of identity_domain recommended).
+            'mail_from_domain' => null,
+            'mail_from_behavior_on_mx_failure' => 'USE_DEFAULT_VALUE',
+
+            // Route53 DNS automation for SES records.
+            'route53' => [
+                'enabled' => false,
+                'hosted_zone_id' => null, // Optional: if null, lookup by identity domain.
+                'auto_create_records' => false,
+                'ttl' => 300,
+            ],
+        ],
     ],
 ];

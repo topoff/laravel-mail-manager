@@ -8,7 +8,9 @@ use Throwable;
 
 class SetupSesSnsTrackingCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:setup';
+    protected $signature = 'mail-manager:ses-sns:setup-tracking';
+
+    protected $aliases = ['mail-manager:ses-sns:setup'];
 
     protected $description = 'Provision SES v2 configuration set + SNS destination + subscription for mail-manager tracking.';
 

@@ -112,6 +112,25 @@ it('provisions missing ses/sns resources and returns green status', function () 
         {
             $this->configurationSetExists = false;
         }
+
+        public function getEmailIdentity(string $identity): ?array
+        {
+            return null;
+        }
+
+        public function createEmailIdentity(string $identity): array
+        {
+            return [];
+        }
+
+        public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
+
+        public function findHostedZoneIdByDomain(string $domain): ?string
+        {
+            return null;
+        }
+
+        public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     };
 
     $service = new SesSnsSetupService($fake);
@@ -196,6 +215,25 @@ it('returns failing checks when topic is missing', function () {
         public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void {}
 
         public function deleteConfigurationSet(string $configurationSetName): void {}
+
+        public function getEmailIdentity(string $identity): ?array
+        {
+            return null;
+        }
+
+        public function createEmailIdentity(string $identity): array
+        {
+            return [];
+        }
+
+        public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
+
+        public function findHostedZoneIdByDomain(string $domain): ?string
+        {
+            return null;
+        }
+
+        public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     };
 
     $service = new SesSnsSetupService($fake);
@@ -235,6 +273,11 @@ it('tears down existing ses/sns resources', function () {
         public function upsertEventDestination(string $configurationSetName, string $eventDestinationName, string $topicArn, array $eventTypes, bool $enabled = true): void {}
         public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void { $this->eventDestination = null; }
         public function deleteConfigurationSet(string $configurationSetName): void { $this->configurationSetExists = false; }
+        public function getEmailIdentity(string $identity): ?array { return null; }
+        public function createEmailIdentity(string $identity): array { return []; }
+        public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
+        public function findHostedZoneIdByDomain(string $domain): ?string { return null; }
+        public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     };
 
     $service = new SesSnsSetupService($fake);

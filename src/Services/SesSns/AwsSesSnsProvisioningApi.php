@@ -9,6 +9,7 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
     protected object $sesV2;
     protected object $sns;
     protected object $sts;
+    protected object $route53;
 
     public function __construct()
     {
@@ -16,14 +17,16 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
         $sesClientClass = '\\Aws\\SesV2\\SesV2Client';
         $snsClientClass = '\\Aws\\Sns\\SnsClient';
         $stsClientClass = '\\Aws\\Sts\\StsClient';
+        $route53ClientClass = '\\Aws\\Route53\\Route53Client';
 
-        if (! class_exists($sesClientClass) || ! class_exists($snsClientClass) || ! class_exists($stsClientClass)) {
+        if (! class_exists($sesClientClass) || ! class_exists($snsClientClass) || ! class_exists($stsClientClass) || ! class_exists($route53ClientClass)) {
             throw new \RuntimeException('AWS SDK classes not found. Please install aws/aws-sdk-php.');
         }
 
         $this->sesV2 = new $sesClientClass($sharedConfig);
         $this->sns = new $snsClientClass($sharedConfig);
         $this->sts = new $stsClientClass($sharedConfig);
+        $this->route53 = new $route53ClientClass($sharedConfig);
     }
 
     public function getCallerAccountId(): string
@@ -215,6 +218,97 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
     {
         $this->sesV2->deleteConfigurationSet([
             'ConfigurationSetName' => $configurationSetName,
+        ]);
+    }
+
+    public function getEmailIdentity(string $identity): ?array
+    {
+        try {
+            $result = $this->sesV2->getEmailIdentity([
+                'EmailIdentity' => $identity,
+            ]);
+        } catch (\Throwable $e) {
+            $errorCode = method_exists($e, 'getAwsErrorCode') ? (string) $e->getAwsErrorCode() : '';
+            if (in_array($errorCode, ['NotFoundException', 'BadRequestException'], true)) {
+                return null;
+            }
+
+            throw $e;
+        }
+
+        return (array) $result;
+    }
+
+    public function createEmailIdentity(string $identity): array
+    {
+        $result = $this->sesV2->createEmailIdentity([
+            'EmailIdentity' => $identity,
+        ]);
+
+        return (array) $result;
+    }
+
+    public function putEmailIdentityMailFromAttributes(
+        string $identity,
+        string $mailFromDomain,
+        string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE',
+    ): void {
+        $this->sesV2->putEmailIdentityMailFromAttributes([
+            'EmailIdentity' => $identity,
+            'MailFromDomain' => $mailFromDomain,
+            'BehaviorOnMxFailure' => $behaviorOnMxFailure,
+        ]);
+    }
+
+    public function findHostedZoneIdByDomain(string $domain): ?string
+    {
+        $nextMarker = null;
+        $domainNormalized = rtrim(strtolower($domain), '.').'.';
+
+        do {
+            $result = $this->route53->listHostedZones(array_filter(['Marker' => $nextMarker]));
+            $zones = (array) ($result['HostedZones'] ?? []);
+
+            foreach ($zones as $zone) {
+                $zoneName = strtolower((string) ($zone['Name'] ?? ''));
+                if ($zoneName === $domainNormalized) {
+                    $id = (string) ($zone['Id'] ?? '');
+
+                    return str_replace('/hostedzone/', '', $id);
+                }
+            }
+
+            $nextMarker = $result['IsTruncated'] ? ($result['NextMarker'] ?? null) : null;
+        } while ($nextMarker !== null);
+
+        return null;
+    }
+
+    public function upsertRoute53Record(
+        string $hostedZoneId,
+        string $recordName,
+        string $recordType,
+        array $values,
+        int $ttl = 300,
+    ): void {
+        $resourceRecords = array_map(
+            static fn (string $value): array => ['Value' => $value],
+            array_values($values)
+        );
+
+        $this->route53->changeResourceRecordSets([
+            'HostedZoneId' => $hostedZoneId,
+            'ChangeBatch' => [
+                'Changes' => [[
+                    'Action' => 'UPSERT',
+                    'ResourceRecordSet' => [
+                        'Name' => $recordName,
+                        'Type' => strtoupper($recordType),
+                        'TTL' => $ttl,
+                        'ResourceRecords' => $resourceRecords,
+                    ],
+                ]],
+            ],
         ]);
     }
 

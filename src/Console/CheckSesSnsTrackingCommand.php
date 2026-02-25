@@ -8,7 +8,9 @@ use Throwable;
 
 class CheckSesSnsTrackingCommand extends Command
 {
-    protected $signature = 'mail-manager:ses-sns:check';
+    protected $signature = 'mail-manager:ses-sns:check-tracking';
+
+    protected $aliases = ['mail-manager:ses-sns:check'];
 
     protected $description = 'Check SES/SNS tracking provisioning state via AWS API.';
 

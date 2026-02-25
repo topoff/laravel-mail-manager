@@ -37,12 +37,6 @@ parameters:
 			path: src/Listeners/AddBccToEmailsListener.php
 
 		-
-			message: '#^Access to an undefined property Topoff\\MailManager\\Models\\Message\:\:\$mailHandler\.$#'
-			identifier: property.notFound
-			count: 2
-			path: src/MailHandler/MainBulkMailHandler.php
-
-		-
 			message: '#^Negated boolean expression is always false\.$#'
 			identifier: booleanNot.alwaysFalse
 			count: 1
