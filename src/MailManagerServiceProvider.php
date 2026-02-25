@@ -16,6 +16,7 @@ use Topoff\MailManager\Http\Controllers\MailTrackingSnsController;
 use Topoff\MailManager\Http\Controllers\NovaCustomMessagePreviewController;
 use Topoff\MailManager\Listeners\AddBccToEmailsListener;
 use Topoff\MailManager\Nova\Resources\Message;
+use Topoff\MailManager\Nova\Resources\MessageType as MessageTypeResource;
 use Topoff\MailManager\Observers\MessageTypeObserver;
 use Topoff\MailManager\Repositories\MessageTypeRepository;
 use Topoff\MailManager\Tracking\MailTracker;
@@ -90,7 +91,12 @@ class MailManagerServiceProvider extends PackageServiceProvider
                 && is_string($resourceClass)
                 && class_exists($resourceClass)
             ) {
-                Nova::resources([$resourceClass]);
+                $messageTypeModelClass = config('mail-manager.models.message_type');
+                if (is_string($messageTypeModelClass) && is_subclass_of($messageTypeModelClass, Model::class)) {
+                    MessageTypeResource::$model = $messageTypeModelClass;
+                }
+
+                Nova::resources([$resourceClass, MessageTypeResource::class]);
             }
         }
     }
