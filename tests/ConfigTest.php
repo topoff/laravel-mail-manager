@@ -38,3 +38,11 @@ it('has nova tracking defaults configured', function () {
         ->and(config('mail-manager.tracking.nova.resource'))->toBe(\Topoff\MailManager\Nova\Resources\Message::class)
         ->and(config('mail-manager.tracking.nova.preview_route.prefix'))->toBe('email-manager/nova');
 });
+
+it('has ses sns setup defaults configured', function () {
+    expect(config('mail-manager.ses_sns.enabled'))->toBeFalse()
+        ->and(config('mail-manager.ses_sns.configuration_set'))->toBe('mail-manager-tracking')
+        ->and(config('mail-manager.ses_sns.event_destination'))->toBe('mail-manager-sns')
+        ->and(config('mail-manager.ses_sns.topic_name'))->toBe('mail-manager-ses-events')
+        ->and(config('mail-manager.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+});

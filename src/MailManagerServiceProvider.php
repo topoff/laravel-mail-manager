@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Event;
 use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
+use Topoff\MailManager\Console\SetupSesSnsTrackingCommand;
+use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 use Topoff\MailManager\Jobs\CleanupMailManagerTablesJob;
 use Topoff\MailManager\Listeners\AddBccToEmailsListener;
 use Topoff\MailManager\Listeners\LogEmailsListener;
@@ -21,6 +24,7 @@ use Topoff\MailManager\Nova\Resources\MessageType as MessageTypeResource;
 use Topoff\MailManager\Nova\Resources\NotificationLog as NotificationLogResource;
 use Topoff\MailManager\Observers\MessageTypeObserver;
 use Topoff\MailManager\Repositories\MessageTypeRepository;
+use Topoff\MailManager\Services\SesSns\AwsSesSnsProvisioningApi;
 use Topoff\MailManager\Tracking\MailTracker;
 
 class MailManagerServiceProvider extends PackageServiceProvider
@@ -31,12 +35,15 @@ class MailManagerServiceProvider extends PackageServiceProvider
             ->name('laravel-mail-manager')
             ->hasConfigFile()
             ->hasViews()
+            ->hasCommand(SetupSesSnsTrackingCommand::class)
+            ->hasCommand(CheckSesSnsTrackingCommand::class)
             ->discoversMigrations();
     }
 
     public function packageRegistered(): void
     {
         $this->app->singleton(MessageTypeRepository::class);
+        $this->app->bind(SesSnsProvisioningApi::class, AwsSesSnsProvisioningApi::class);
     }
 
     public function packageBooted(): void

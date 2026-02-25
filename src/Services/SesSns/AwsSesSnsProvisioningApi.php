@@ -1,0 +1,215 @@
+<?php
+
+namespace Topoff\MailManager\Services\SesSns;
+
+use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
+
+class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
+{
+    protected object $sesV2;
+    protected object $sns;
+    protected object $sts;
+
+    public function __construct()
+    {
+        $sharedConfig = $this->sharedAwsConfig();
+        $sesClientClass = '\\Aws\\SesV2\\SesV2Client';
+        $snsClientClass = '\\Aws\\Sns\\SnsClient';
+        $stsClientClass = '\\Aws\\Sts\\StsClient';
+
+        if (! class_exists($sesClientClass) || ! class_exists($snsClientClass) || ! class_exists($stsClientClass)) {
+            throw new \RuntimeException('AWS SDK classes not found. Please install aws/aws-sdk-php.');
+        }
+
+        $this->sesV2 = new $sesClientClass($sharedConfig);
+        $this->sns = new $snsClientClass($sharedConfig);
+        $this->sts = new $stsClientClass($sharedConfig);
+    }
+
+    public function getCallerAccountId(): string
+    {
+        $result = $this->sts->getCallerIdentity();
+
+        return (string) ($result['Account'] ?? '');
+    }
+
+    public function findTopicArnByName(string $topicName): ?string
+    {
+        $nextToken = null;
+
+        do {
+            $result = $this->sns->listTopics(array_filter(['NextToken' => $nextToken]));
+            $topics = (array) ($result['Topics'] ?? []);
+
+            foreach ($topics as $topic) {
+                $topicArn = (string) ($topic['TopicArn'] ?? '');
+                if ($topicArn !== '' && str_ends_with($topicArn, ':'.$topicName)) {
+                    return $topicArn;
+                }
+            }
+
+            $nextToken = $result['NextToken'] ?? null;
+        } while ($nextToken);
+
+        return null;
+    }
+
+    public function createTopic(string $topicName): string
+    {
+        $result = $this->sns->createTopic(['Name' => $topicName]);
+
+        return (string) ($result['TopicArn'] ?? '');
+    }
+
+    public function getTopicAttributes(string $topicArn): array
+    {
+        $result = $this->sns->getTopicAttributes(['TopicArn' => $topicArn]);
+
+        return (array) ($result['Attributes'] ?? []);
+    }
+
+    public function setTopicPolicy(string $topicArn, string $policyJson): void
+    {
+        $this->sns->setTopicAttributes([
+            'TopicArn' => $topicArn,
+            'AttributeName' => 'Policy',
+            'AttributeValue' => $policyJson,
+        ]);
+    }
+
+    public function hasHttpsSubscription(string $topicArn, string $endpoint): bool
+    {
+        $nextToken = null;
+
+        do {
+            $result = $this->sns->listSubscriptionsByTopic(array_filter([
+                'TopicArn' => $topicArn,
+                'NextToken' => $nextToken,
+            ]));
+
+            $subscriptions = (array) ($result['Subscriptions'] ?? []);
+            foreach ($subscriptions as $subscription) {
+                if (($subscription['Protocol'] ?? null) === 'https' && ($subscription['Endpoint'] ?? null) === $endpoint) {
+                    return true;
+                }
+            }
+
+            $nextToken = $result['NextToken'] ?? null;
+        } while ($nextToken);
+
+        return false;
+    }
+
+    public function subscribeHttps(string $topicArn, string $endpoint): void
+    {
+        $this->sns->subscribe([
+            'TopicArn' => $topicArn,
+            'Protocol' => 'https',
+            'Endpoint' => $endpoint,
+        ]);
+    }
+
+    public function configurationSetExists(string $configurationSetName): bool
+    {
+        try {
+            $this->sesV2->getConfigurationSet(['ConfigurationSetName' => $configurationSetName]);
+
+            return true;
+        } catch (\Throwable $e) {
+            $errorCode = method_exists($e, 'getAwsErrorCode') ? (string) $e->getAwsErrorCode() : '';
+            if (in_array($errorCode, ['NotFoundException', 'ConfigurationSetDoesNotExistException'], true)) {
+                return false;
+            }
+
+            throw $e;
+        }
+    }
+
+    public function createConfigurationSet(string $configurationSetName): void
+    {
+        $this->sesV2->createConfigurationSet(['ConfigurationSetName' => $configurationSetName]);
+    }
+
+    public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array
+    {
+        try {
+            $result = $this->sesV2->getConfigurationSetEventDestinations([
+                'ConfigurationSetName' => $configurationSetName,
+            ]);
+        } catch (\Throwable $e) {
+            $errorCode = method_exists($e, 'getAwsErrorCode') ? (string) $e->getAwsErrorCode() : '';
+            if (in_array($errorCode, ['NotFoundException', 'ConfigurationSetDoesNotExistException'], true)) {
+                return null;
+            }
+
+            throw $e;
+        }
+
+        $destinations = (array) ($result['EventDestinations'] ?? []);
+        foreach ($destinations as $destination) {
+            if (($destination['Name'] ?? null) === $eventDestinationName) {
+                return (array) $destination;
+            }
+        }
+
+        return null;
+    }
+
+    public function upsertEventDestination(
+        string $configurationSetName,
+        string $eventDestinationName,
+        string $topicArn,
+        array $eventTypes,
+        bool $enabled = true,
+    ): void {
+        $payload = [
+            'ConfigurationSetName' => $configurationSetName,
+            'EventDestinationName' => $eventDestinationName,
+            'EventDestination' => [
+                'Enabled' => $enabled,
+                'MatchingEventTypes' => array_values($eventTypes),
+                'SnsDestination' => ['TopicArn' => $topicArn],
+            ],
+        ];
+
+        $existing = $this->getEventDestination($configurationSetName, $eventDestinationName);
+        if ($existing === null) {
+            $this->sesV2->createConfigurationSetEventDestination($payload);
+
+            return;
+        }
+
+        $this->sesV2->updateConfigurationSetEventDestination($payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function sharedAwsConfig(): array
+    {
+        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $profile = config('mail-manager.ses_sns.aws.profile');
+        $key = config('mail-manager.ses_sns.aws.key');
+        $secret = config('mail-manager.ses_sns.aws.secret');
+        $sessionToken = config('mail-manager.ses_sns.aws.session_token');
+
+        $config = [
+            'version' => 'latest',
+            'region' => $region,
+        ];
+
+        if (is_string($profile) && $profile !== '') {
+            $config['profile'] = $profile;
+        }
+
+        if (is_string($key) && $key !== '' && is_string($secret) && $secret !== '') {
+            $config['credentials'] = array_filter([
+                'key' => $key,
+                'secret' => $secret,
+                'token' => is_string($sessionToken) && $sessionToken !== '' ? $sessionToken : null,
+            ]);
+        }
+
+        return $config;
+    }
+}

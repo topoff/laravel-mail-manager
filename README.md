@@ -25,6 +25,32 @@ php artisan vendor:publish --tag="mail-manager-config"
 
 Documentation coming soon.
 
+### SES/SNS Auto Setup (SES v2 Configuration Sets)
+
+The package can provision SES/SNS tracking resources via AWS API:
+
+- SES Configuration Set
+- SES Event Destination (SNS)
+- SNS Topic policy for SES publish
+- SNS HTTPS subscription to `mail-manager.tracking.sns`
+
+Enable it in config:
+
+```php
+'ses_sns' => [
+    'enabled' => true,
+],
+```
+
+Then run:
+
+```bash
+php artisan mail-manager:ses-sns:setup
+php artisan mail-manager:ses-sns:check
+```
+
+In Nova (`Message Types` resource), use action `Setup SES/SNS Tracking` to run setup and open the status/check page.
+
 ### Nova Integration
 
 If Laravel Nova is installed, the package can auto-register a tracked messages resource with preview and resend actions.
