@@ -28,6 +28,9 @@ return [
         // Callable or null. Resolves the URL shown in bulk mails.
         // Signature: fn(MessageReceiverInterface $receiver): ?string
         'bulk_mail_url' => null,
+
+        // View used by the package custom message mail action.
+        'custom_message_view' => 'mail-manager::customMessage',
     ],
 
     'sending' => [
@@ -75,6 +78,12 @@ return [
                 'prefix' => 'email-manager/nova',
                 'middleware' => ['web', 'signed'],
             ],
+        ],
+
+        // Preview route used by the package "Send Custom Message" Nova action.
+        'custom_preview_route' => [
+            'prefix' => 'email-manager/nova',
+            'middleware' => ['web', 'signed'],
         ],
 
         // If we get a link click without a URL, where should we send it to?

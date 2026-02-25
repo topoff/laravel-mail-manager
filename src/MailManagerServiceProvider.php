@@ -13,6 +13,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\MailManager\Http\Controllers\MailTrackingController;
 use Topoff\MailManager\Http\Controllers\MailTrackingNovaController;
 use Topoff\MailManager\Http\Controllers\MailTrackingSnsController;
+use Topoff\MailManager\Http\Controllers\NovaCustomMessagePreviewController;
 use Topoff\MailManager\Listeners\AddBccToEmailsListener;
 use Topoff\MailManager\Nova\Resources\Message;
 use Topoff\MailManager\Observers\MessageTypeObserver;
@@ -66,6 +67,14 @@ class MailManagerServiceProvider extends PackageServiceProvider
                 Route::get('preview/{id}', [MailTrackingNovaController::class, 'preview'])->name('mail-manager.tracking.nova.preview');
             });
         }
+
+        $customPreviewRoute = config('mail-manager.tracking.custom_preview_route', [
+            'prefix' => 'email-manager/nova',
+            'middleware' => ['web', 'signed'],
+        ]);
+        Route::group($customPreviewRoute, function (): void {
+            Route::get('custom-preview', [NovaCustomMessagePreviewController::class, 'show'])->name('mail-manager.tracking.nova.custom-preview');
+        });
 
         if (class_exists(Nova::class) && (bool) ($novaConfig['enabled'] ?? true)) {
             $resourceClass = $novaConfig['resource'] ?? Message::class;
