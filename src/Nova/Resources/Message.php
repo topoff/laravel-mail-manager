@@ -11,7 +11,7 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Topoff\MailManager\Models\Message as MessageModel;
-use Topoff\MailManager\Nova\Actions\PreviewMessageAction;
+use Topoff\MailManager\Nova\Actions\ShowRealSentMessageAction;
 use Topoff\MailManager\Nova\Actions\ResendMessageAction;
 
 class Message extends Resource
@@ -116,7 +116,7 @@ class Message extends Resource
     public function actions(NovaRequest $request): array
     {
         return [
-            (new PreviewMessageAction)->confirmText('')->confirmButtonText('Go'),
+            (new ShowRealSentMessageAction)->confirmText('')->confirmButtonText('Go'),
             (new ResendMessageAction)->confirmText('')->confirmButtonText('Go'),
         ];
     }

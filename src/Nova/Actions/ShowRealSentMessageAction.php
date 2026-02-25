@@ -10,9 +10,9 @@ use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Topoff\MailManager\Models\Message;
 
-class PreviewMessageAction extends Action
+class ShowRealSentMessageAction extends Action
 {
-    public $name = 'Preview Tracked Email';
+    public $name = 'Show Real Sent Message';
 
     public function handle(ActionFields $fields, Collection $models): Action|ActionResponse|null
     {
