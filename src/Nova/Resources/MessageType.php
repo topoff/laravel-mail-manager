@@ -12,6 +12,7 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Topoff\MailManager\Models\MessageType as MessageTypeModel;
+use Topoff\MailManager\Nova\Actions\PreviewMessageTypeInBrowserAction;
 
 class MessageType extends Resource
 {
@@ -100,6 +101,8 @@ class MessageType extends Resource
      */
     public function actions(NovaRequest $request): array
     {
-        return [];
+        return [
+            (new PreviewMessageTypeInBrowserAction)->sole()->confirmText('')->confirmButtonText('Preview'),
+        ];
     }
 }

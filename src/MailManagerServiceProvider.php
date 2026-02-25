@@ -11,6 +11,7 @@ use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\MailManager\Http\Controllers\MailTrackingController;
+use Topoff\MailManager\Http\Controllers\NovaMailPreviewController;
 use Topoff\MailManager\Http\Controllers\MailTrackingNovaController;
 use Topoff\MailManager\Http\Controllers\MailTrackingSnsController;
 use Topoff\MailManager\Http\Controllers\NovaCustomMessagePreviewController;
@@ -66,6 +67,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
             $previewRoute = $novaConfig['preview_route'] ?? [];
             Route::group($previewRoute, function (): void {
                 Route::get('preview/{id}', [MailTrackingNovaController::class, 'preview'])->name('mail-manager.tracking.nova.preview');
+                Route::get('preview-message/{message}', [NovaMailPreviewController::class, 'show'])->name('mail-manager.tracking.nova.preview-message');
             });
         }
 
