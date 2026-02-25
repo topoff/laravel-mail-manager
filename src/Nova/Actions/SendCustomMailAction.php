@@ -27,7 +27,6 @@ class SendCustomMailAction extends Action
     use InteractsWithQueue, Queueable;
 
     public $name = 'Send Custom Email';
-    public $confirmText = 'Email an X Personen senden';
 
     public function handle(ActionFields $fields, Collection $models): Action|ActionResponse|null
     {
