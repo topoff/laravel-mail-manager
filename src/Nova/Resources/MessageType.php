@@ -13,6 +13,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Topoff\MailManager\Models\MessageType as MessageTypeModel;
 use Topoff\MailManager\Nova\Actions\CheckSesSnsTrackingAction;
+use Topoff\MailManager\Nova\Actions\OpenSesSnsSiteAction;
 use Topoff\MailManager\Nova\Actions\PreviewMessageTypeInBrowserAction;
 use Topoff\MailManager\Nova\Actions\SetupSesSnsTrackingAction;
 
@@ -105,6 +106,7 @@ class MessageType extends Resource
     {
         return [
             (new PreviewMessageTypeInBrowserAction)->sole()->confirmText('')->confirmButtonText('Preview'),
+            (new OpenSesSnsSiteAction)->standalone()->confirmText('Open the SES/SNS setup site in a new tab?')->confirmButtonText('Open'),
             (new CheckSesSnsTrackingAction)->standalone()->confirmText('Run SES/SNS status checks?')->confirmButtonText('Check'),
             (new SetupSesSnsTrackingAction)->standalone()->confirmText('Provision SES/SNS resources via AWS API and open status page?')->confirmButtonText('Setup'),
         ];

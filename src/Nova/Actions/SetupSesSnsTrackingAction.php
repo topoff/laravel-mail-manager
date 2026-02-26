@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\URL;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
 use Throwable;
+use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
 
 class SetupSesSnsTrackingAction extends Action
 {
@@ -27,7 +27,7 @@ class SetupSesSnsTrackingAction extends Action
             }
 
             $statusUrl = URL::temporarySignedRoute(
-                'mail-manager.ses-sns.status',
+                'mail-manager.ses-sns.site',
                 now()->addMinutes(30)
             );
 

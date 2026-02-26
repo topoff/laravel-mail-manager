@@ -1,0 +1,74 @@
+<?php
+
+namespace Topoff\MailManager\Http\Controllers;
+
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
+use Topoff\MailManager\Mail\CustomMessageMail;
+use Topoff\MailManager\Models\Message;
+
+class SesSnsNovaCustomMailActionController extends Controller
+{
+    public function show(Request $request)
+    {
+        return view('mail-manager::ses-sns-custom-mail-action', [
+            'send_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail.send', now()->addMinutes(30)),
+            'back_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site', now()->addMinutes(30)),
+            'preview_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail.preview', now()->addMinutes(30)),
+        ]);
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public function send(Request $request): RedirectResponse
+    {
+        $payload = $request->validate([
+            'email' => ['required', 'email:rfc,dns'],
+            'subject' => ['required', 'string', 'max:180'],
+            'markdown' => ['required', 'string', 'max:65000'],
+        ]);
+
+        $message = $this->messageFromPayload($payload);
+        Mail::to($payload['email'])->send(new CustomMessageMail($message));
+
+        return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail', now()->addMinutes(30)))
+            ->with('mail_manager_custom_mail_result', [
+                'ok' => true,
+                'email' => $payload['email'],
+                'subject' => $payload['subject'],
+                'message' => 'Custom mail has been sent.',
+            ]);
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public function preview(Request $request)
+    {
+        $payload = $request->validate([
+            'subject' => ['required', 'string', 'max:180'],
+            'markdown' => ['required', 'string', 'max:65000'],
+        ]);
+
+        $message = $this->messageFromPayload($payload);
+        $html = (new CustomMessageMail($message))->render();
+
+        return response($html);
+    }
+
+    /**
+     * @param  array{subject: string, markdown: string}  $payload
+     */
+    protected function messageFromPayload(array $payload): Message
+    {
+        return new Message([
+            'params' => ['subject' => (string) $payload['subject']],
+            'text' => (string) $payload['markdown'],
+        ]);
+    }
+}
