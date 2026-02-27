@@ -159,3 +159,108 @@ it('creates ses domain identity and returns required dns records', function () {
             'arn:aws:ses:eu-central-1:123:configuration-set/mail-manager-tracking',
         );
 });
+
+it('checks if MAIL_FROM_ADDRESS matches ses identity', function () {
+    config()->set('mail-manager.ses_sns.sending.identity_email', 'sender@example.com');
+    config()->set('mail.from.address', 'sender@example.com');
+
+    $fake = new class implements SesSnsProvisioningApi
+    {
+        public function getCallerAccountId(): string
+        {
+            return '123';
+        }
+
+        public function findTopicArnByName(string $topicName): ?string
+        {
+            return null;
+        }
+
+        public function createTopic(string $topicName): string
+        {
+            return '';
+        }
+
+        public function getTopicAttributes(string $topicArn): array
+        {
+            return [];
+        }
+
+        public function setTopicPolicy(string $topicArn, string $policyJson): void {}
+
+        public function hasHttpsSubscription(string $topicArn, string $endpoint): bool
+        {
+            return false;
+        }
+
+        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string
+        {
+            return null;
+        }
+
+        public function subscribeHttps(string $topicArn, string $endpoint): void {}
+
+        public function unsubscribe(string $subscriptionArn): void {}
+
+        public function deleteTopic(string $topicArn): void {}
+
+        public function configurationSetExists(string $configurationSetName): bool
+        {
+            return false;
+        }
+
+        public function createConfigurationSet(string $configurationSetName): void {}
+
+        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array
+        {
+            return null;
+        }
+
+        public function upsertEventDestination(string $configurationSetName, string $eventDestinationName, string $topicArn, array $eventTypes, bool $enabled = true): void {}
+
+        public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void {}
+
+        public function deleteConfigurationSet(string $configurationSetName): void {}
+
+        public function tenantExists(string $tenantName): bool
+        {
+            return false;
+        }
+
+        public function createTenant(string $tenantName): void {}
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return false;
+        }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void {}
+
+        public function getEmailIdentity(string $identity): ?array
+        {
+            return ['VerifiedForSendingStatus' => true];
+        }
+
+        public function createEmailIdentity(string $identity): array
+        {
+            return [];
+        }
+
+        public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
+
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
+        public function findHostedZoneIdByDomain(string $domain): ?string
+        {
+            return null;
+        }
+
+        public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
+    };
+
+    $service = new SesSendingSetupService($fake);
+    $result = $service->check();
+
+    expect($result['ok'])->toBeTrue()
+        ->and(collect($result['checks'])->firstWhere('key', 'mail_from_address_matches_identity')['ok'])->toBeTrue();
+});

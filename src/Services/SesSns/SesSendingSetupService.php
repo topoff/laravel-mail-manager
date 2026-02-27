@@ -97,6 +97,28 @@ class SesSendingSetupService
             $identity
         );
 
+        $mailFromAddress = trim((string) config('mail.from.address', ''));
+        if ($mailFromAddress === '') {
+            $this->addCheck(
+                $checks,
+                'mail_from_address_matches_identity',
+                'MAIL_FROM_ADDRESS matches SES identity',
+                false,
+                'MAIL_FROM_ADDRESS is empty.'
+            );
+        } else {
+            $mailFromAddressMatchesIdentity = $this->mailFromAddressMatchesIdentity($identity, $mailFromAddress);
+            $this->addCheck(
+                $checks,
+                'mail_from_address_matches_identity',
+                'MAIL_FROM_ADDRESS matches SES identity',
+                $mailFromAddressMatchesIdentity,
+                $mailFromAddressMatchesIdentity
+                    ? sprintf('MAIL_FROM_ADDRESS "%s" matches identity "%s".', $mailFromAddress, $identity)
+                    : sprintf('MAIL_FROM_ADDRESS "%s" does not match identity "%s".', $mailFromAddress, $identity)
+            );
+        }
+
         $dnsRecords = $identityData !== null ? $this->buildDnsRecords($identity, $identityData) : [];
         $verifiedForSending = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
         $this->addCheck(
@@ -267,6 +289,21 @@ class SesSendingSetupService
         }
 
         return $identity;
+    }
+
+    protected function mailFromAddressMatchesIdentity(string $identity, string $mailFromAddress): bool
+    {
+        if (str_contains($identity, '@')) {
+            return strtolower($mailFromAddress) === strtolower($identity);
+        }
+
+        if (! str_contains($mailFromAddress, '@')) {
+            return false;
+        }
+
+        $mailFromAddressDomain = (string) substr(strrchr($mailFromAddress, '@') ?: '', 1);
+
+        return strtolower($mailFromAddressDomain) === strtolower($identity);
     }
 
     protected function mailFromDomain(): ?string

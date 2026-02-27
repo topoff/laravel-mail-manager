@@ -48,28 +48,36 @@
     <div class="card">
         <h1>Amazon SES + SNS Nova Site</h1>
         <p class="meta">One place to setup and verify AWS SES sending + SES/SNS event tracking for a new app.</p>
+    </div>
 
-        <div class="grid">
-            <div>
-                <h3>Sending</h3>
-                @if(data_get($sending, 'ok') === true)
-                    <span class="badge ok">Healthy</span>
-                @elseif(data_get($sending, 'ok') === false)
-                    <span class="badge fail">Needs Fixes</span>
-                @else
-                    <span class="badge warn">Not Enabled</span>
-                @endif
-            </div>
-            <div>
-                <h3>Tracking</h3>
-                @if(data_get($tracking, 'ok') === true)
-                    <span class="badge ok">Healthy</span>
-                @elseif(data_get($tracking, 'ok') === false)
-                    <span class="badge fail">Needs Fixes</span>
-                @else
-                    <span class="badge warn">Not Enabled</span>
-                @endif
-            </div>
+    <div class="grid">
+        <div class="card">
+            <h2>Sending Status</h2>
+            @if(data_get($sending, 'ok') === true)
+                <span class="badge ok">Healthy</span>
+            @elseif(data_get($sending, 'ok') === false)
+                <span class="badge fail">Needs Fixes</span>
+            @else
+                <span class="badge warn">Unknown</span>
+            @endif
+        </div>
+
+        <div class="card">
+            <h2>Tracking Status</h2>
+            @if(data_get($tracking, 'ok') === true)
+                <span class="badge ok">Healthy</span>
+            @elseif(data_get($tracking, 'ok') === false)
+                <span class="badge fail">Needs Fixes</span>
+            @else
+                <span class="badge warn">Unknown</span>
+            @endif
+        </div>
+
+        <div class="card">
+            <h2>Mail Transport</h2>
+            <p><strong>Mailer:</strong> <code>{{ data_get($app_config, 'mail_default_mailer') ?: '(empty)' }}</code></p>
+            <p><strong>From Email:</strong> <code>{{ data_get($app_config, 'mail_from_address') ?: '(empty)' }}</code></p>
+            <p><strong>From Name:</strong> <code>{{ data_get($app_config, 'mail_from_name') ?: '(empty)' }}</code></p>
         </div>
     </div>
 

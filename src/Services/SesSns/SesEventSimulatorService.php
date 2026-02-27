@@ -17,7 +17,7 @@ class SesEventSimulatorService
     }
 
     /**
-     * @param  array<int, array{key: string, value: string}>  $tags
+     * @param  array<int, array{Name: string, Value: string}>  $tags
      */
     public function send(
         string $fromEmail,

@@ -68,8 +68,8 @@ class TestSesSnsEventsCommand extends Command
                 configurationSetName: $configurationSet,
                 tenantName: $tenantName,
                 tags: [
-                    ['key' => 'mail_manager_test', 'value' => 'true'],
-                    ['key' => 'scenario', 'value' => $scenario],
+                    ['Name' => 'mail_manager_test', 'Value' => 'true'],
+                    ['Name' => 'scenario', 'Value' => $scenario],
                 ],
             );
 
