@@ -81,17 +81,17 @@ class SesSnsNovaSiteController extends Controller
                 ],
                 [
                     'label' => 'Test Delivery Event + DB Verify',
-                    'description' => 'Send delivery simulator event and verify tracking_meta updates in messages table.',
+                    'description' => 'Send delivery simulator event and verify tracking_meta updates in messages table (test events are processed synchronously in the SNS webhook).',
                     'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-delivery-db']),
                 ],
                 [
                     'label' => 'Test Bounce Event + DB Verify',
-                    'description' => 'Send bounce simulator event and verify tracking_meta updates in messages table.',
+                    'description' => 'Send bounce simulator event and verify tracking_meta updates in messages table (test events are processed synchronously in the SNS webhook).',
                     'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-bounce-db']),
                 ],
                 [
                     'label' => 'Test Complaint Event + DB Verify',
-                    'description' => 'Send complaint simulator event and verify tracking_meta updates in messages table.',
+                    'description' => 'Send complaint simulator event and verify tracking_meta updates in messages table (test events are processed synchronously in the SNS webhook).',
                     'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-complaint-db']),
                 ],
                 [

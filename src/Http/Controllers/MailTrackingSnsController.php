@@ -5,6 +5,7 @@ namespace Topoff\MailManager\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Http;
+use Topoff\MailManager\Events\SesSnsWebhookReceivedEvent;
 use Topoff\MailManager\Jobs\RecordBounceJob;
 use Topoff\MailManager\Jobs\RecordComplaintJob;
 use Topoff\MailManager\Jobs\RecordDeliveryJob;
@@ -38,8 +39,9 @@ class MailTrackingSnsController extends Controller
             return 'invalid topic ARN';
         }
 
-        $notificationType = $message['notificationType'] ?? null;
+        $notificationType = $message['notificationType'] ?? $message['eventType'] ?? null;
         $processSynchronously = $this->isMailManagerTestNotification($message);
+        event(new SesSnsWebhookReceivedEvent($payload, $message, $notificationType, $processSynchronously));
 
         match ($notificationType) {
             'Delivery' => $this->dispatchTrackingJob(RecordDeliveryJob::class, $message, $processSynchronously),
@@ -86,19 +88,36 @@ class MailTrackingSnsController extends Controller
      */
     protected function extractMailTagValue(array $message, string $tagName): ?string
     {
-        foreach ((array) data_get($message, 'mail.tags', []) as $tag) {
-            if (! is_array($tag)) {
+        $tags = (array) data_get($message, 'mail.tags', []);
+
+        // SES SNS payload often provides tags as a map: {"tagName": ["value"]}.
+        if (array_is_list($tags)) {
+            foreach ($tags as $tag) {
+                if (! is_array($tag)) {
+                    continue;
+                }
+
+                $name = (string) ($tag['name'] ?? $tag['Name'] ?? $tag['key'] ?? $tag['Key'] ?? '');
+                if (strtolower($name) !== strtolower($tagName)) {
+                    continue;
+                }
+
+                $value = (string) ($tag['value'] ?? $tag['Value'] ?? '');
+
+                return $value !== '' ? $value : null;
+            }
+
+            return null;
+        }
+
+        foreach ($tags as $name => $values) {
+            if (strtolower((string) $name) !== strtolower($tagName)) {
                 continue;
             }
 
-            $name = (string) ($tag['name'] ?? $tag['Name'] ?? $tag['key'] ?? $tag['Key'] ?? '');
-            if (strtolower($name) !== strtolower($tagName)) {
-                continue;
-            }
+            $firstValue = is_array($values) ? (string) ($values[0] ?? '') : (string) $values;
 
-            $value = (string) ($tag['value'] ?? $tag['Value'] ?? '');
-
-            return $value !== '' ? $value : null;
+            return $firstValue !== '' ? $firstValue : null;
         }
 
         return null;

@@ -1,8 +1,12 @@
 <?php
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Topoff\MailManager\Events\SesSnsWebhookReceivedEvent;
 
 it('records delivery notifications via sns callback', function () {
+    Event::fake([SesSnsWebhookReceivedEvent::class]);
+
     $message = createMessage([
         'tracking_message_id' => 'delivery-mid-1',
         'tracking_meta' => [],
@@ -27,6 +31,12 @@ it('records delivery notifications via sns callback', function () {
 
     expect(data_get($message->tracking_meta, 'success'))->toBeTrue()
         ->and(data_get($message->tracking_meta, 'smtpResponse'))->toBe('250 Ok');
+
+    Event::assertDispatched(SesSnsWebhookReceivedEvent::class, function (SesSnsWebhookReceivedEvent $event): bool {
+        return $event->notificationType === 'Delivery'
+            && $event->processedSynchronously === false
+            && data_get($event->sesMessage, 'mail.messageId') === 'delivery-mid-1';
+    });
 });
 
 it('records bounce notifications via sns callback', function () {
@@ -109,6 +119,46 @@ it('processes mail-manager test notifications synchronously', function () {
                 'smtpResponse' => '250 Ok',
                 'timestamp' => '2026-01-01T00:00:00Z',
                 'recipients' => ['receiver@example.com'],
+            ],
+        ]),
+    ];
+
+    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+
+    $message->refresh();
+
+    expect(data_get($message->tracking_meta, 'success'))->toBeTrue()
+        ->and(data_get($message->tracking_meta, 'smtpResponse'))->toBe('250 Ok');
+
+    Queue::assertNothingPushed();
+});
+
+it('processes eventType payload format from ses with tag map', function () {
+    Queue::fake();
+
+    $message = createMessage([
+        'tracking_message_id' => 'delivery-mid-event-type',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'eventType' => 'Delivery',
+            'mail' => [
+                'messageId' => 'delivery-mid-event-type',
+                'commonHeaders' => [
+                    'subject' => '[mail-manager][delivery] 2026-02-27 13:33:49',
+                ],
+                'tags' => [
+                    'mail_manager_test' => ['true'],
+                    'scenario' => ['delivery'],
+                ],
+            ],
+            'delivery' => [
+                'smtpResponse' => '250 Ok',
+                'timestamp' => '2026-01-01T00:00:00Z',
+                'recipients' => ['success@simulator.amazonses.com'],
             ],
         ]),
     ];
