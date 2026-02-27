@@ -214,7 +214,7 @@ class TestSesSnsEventsCommand extends Command
 
         /** @var Model $messageType */
         $messageType = $messageTypeModelClass::query()->firstOrCreate(
-            ['mail_class' => 'Topoff\\MailManager\\Mail\\BulkMail'],
+            ['mail_class' => 'Topoff\\MailManager\\Mail\\SesTestMail'],
             [
                 'single_mail_handler' => null,
                 'bulk_mail_handler' => null,
