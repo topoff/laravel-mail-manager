@@ -62,6 +62,15 @@ it('has a morphTo messagable relationship', function () {
         ->and($message->messagable->id)->toBe($messagable->id);
 });
 
+it('does not crash when messagable_type is an invalid class string', function () {
+    $message = createMessage([
+        'messagable_type' => 'mail-manager-simulator',
+        'messagable_id' => 1,
+    ]);
+
+    expect($message->messagable)->toBeNull();
+});
+
 it('scopes direct message types', function () {
     $directType = createMessageType(['mail_class' => 'Direct\\Test', 'direct' => true]);
     $indirectType = createMessageType(['mail_class' => 'Indirect\\Test', 'direct' => false]);

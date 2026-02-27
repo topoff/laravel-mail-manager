@@ -80,6 +80,12 @@ class Message extends Model
 
     public function messagable(): MorphTo
     {
+        $messagableType = $this->getAttribute('messagable_type');
+        if (is_string($messagableType) && $messagableType !== '' && ! class_exists($messagableType)) {
+            $this->setAttribute('messagable_type', null);
+            $this->setAttribute('messagable_id', null);
+        }
+
         return $this->morphTo();
     }
 
