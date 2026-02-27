@@ -280,6 +280,14 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
         ]);
     }
 
+    public function disassociateTenantResource(string $tenantName, string $resourceArn): void
+    {
+        $this->sesV2->deleteTenantResourceAssociation([
+            'TenantName' => $tenantName,
+            'ResourceArn' => $resourceArn,
+        ]);
+    }
+
     public function getEmailIdentity(string $identity): ?array
     {
         try {

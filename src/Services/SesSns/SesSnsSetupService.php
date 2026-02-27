@@ -106,7 +106,7 @@ class SesSnsSetupService
             $this->addCheck($checks, 'ses_destination_exists', 'SES event destination exists', false, 'Configuration set missing.');
             $this->addCheck($checks, 'ses_destination_topic', 'SES destination points to SNS topic', false, 'Configuration set missing.');
             $this->addCheck($checks, 'ses_destination_enabled', 'SES destination is enabled', false, 'Configuration set missing.');
-                $this->addCheck($checks, 'ses_destination_events', 'SES destination has required event types', false, 'Configuration set missing.');
+            $this->addCheck($checks, 'ses_destination_events', 'SES destination has required event types', false, 'Configuration set missing.');
         }
 
         $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
@@ -185,10 +185,12 @@ class SesSnsSetupService
                     $steps[] = ['label' => 'SES event destination', 'ok' => true, 'details' => 'Nothing to remove.'];
                 }
 
+                $this->removeTenantConfigurationSetAssociation($configurationSet, $steps);
                 $this->api->deleteConfigurationSet($configurationSet);
                 $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Removed: '.$configurationSet];
             } else {
                 $steps[] = ['label' => 'SES event destination', 'ok' => true, 'details' => 'Skipped: configuration set missing.'];
+                $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Skipped: configuration set missing.'];
                 $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Nothing to remove.'];
             }
         } catch (Throwable $e) {
@@ -428,6 +430,38 @@ class SesSnsSetupService
         } else {
             $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Already associated: '.$configurationSetArn];
         }
+    }
+
+    /**
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function removeTenantConfigurationSetAssociation(string $configurationSet, array &$steps): void
+    {
+        $tenantName = $this->tenantName();
+        if ($tenantName === null) {
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Skipped (tenant not configured).'];
+
+            return;
+        }
+
+        if (! $this->api->tenantExists($tenantName)) {
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Skipped (tenant missing).'];
+
+            return;
+        }
+
+        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $accountId = $this->accountId();
+        $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSet);
+
+        if (! $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn)) {
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Nothing to remove.'];
+
+            return;
+        }
+
+        $this->api->disassociateTenantResource($tenantName, $configurationSetArn);
+        $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Removed: '.$configurationSetArn];
     }
 
     /**

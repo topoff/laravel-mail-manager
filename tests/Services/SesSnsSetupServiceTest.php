@@ -146,6 +146,8 @@ it('provisions missing ses/sns resources and returns green status', function () 
 
         public function associateTenantResource(string $tenantName, string $resourceArn): void {}
 
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;
@@ -265,6 +267,8 @@ it('returns failing checks when topic is missing', function () {
 
         public function associateTenantResource(string $tenantName, string $resourceArn): void {}
 
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;
@@ -282,6 +286,9 @@ it('returns failing checks when topic is missing', function () {
 
 it('tears down existing ses/sns resources', function () {
     config()->set('mail-manager.ses_sns.enabled', true);
+    config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
+    config()->set('mail-manager.ses_sns.aws.account_id', '123456789012');
+    config()->set('mail-manager.ses_sns.tenant.name', 'tenant-a');
     config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
     config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
     config()->set('mail-manager.ses_sns.event_destination', 'mail-manager-sns');
@@ -296,6 +303,8 @@ it('tears down existing ses/sns resources', function () {
         public ?array $eventDestination = ['Name' => 'mail-manager-sns'];
 
         public array $subscriptions = ['https://backend.example.test/email/sns'];
+
+        public array $associatedResources = ['arn:aws:ses:eu-central-1:123456789012:configuration-set/mail-manager-tracking'];
 
         public function getCallerAccountId(): string
         {
@@ -381,17 +390,25 @@ it('tears down existing ses/sns resources', function () {
 
         public function tenantExists(string $tenantName): bool
         {
-            return false;
+            return true;
         }
 
         public function createTenant(string $tenantName): void {}
 
         public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
         {
-            return false;
+            return in_array($resourceArn, $this->associatedResources, true);
         }
 
         public function associateTenantResource(string $tenantName, string $resourceArn): void {}
+
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void
+        {
+            $this->associatedResources = array_values(array_filter(
+                $this->associatedResources,
+                static fn (string $arn): bool => $arn !== $resourceArn
+            ));
+        }
 
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
@@ -408,5 +425,6 @@ it('tears down existing ses/sns resources', function () {
         ->and($fake->subscriptions)->toBe([])
         ->and($fake->eventDestination)->toBeNull()
         ->and($fake->configurationSetExists)->toBeFalse()
+        ->and($fake->associatedResources)->toBe([])
         ->and($fake->topicArn)->toBeNull();
 });

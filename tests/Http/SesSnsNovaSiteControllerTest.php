@@ -136,6 +136,8 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
 
         public function associateTenantResource(string $tenantName, string $resourceArn): void {}
 
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;

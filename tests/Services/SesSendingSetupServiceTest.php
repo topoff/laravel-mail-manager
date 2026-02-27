@@ -113,6 +113,14 @@ it('creates ses domain identity and returns required dns records', function () {
             $this->associatedResources[] = $resourceArn;
         }
 
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void
+        {
+            $this->associatedResources = array_values(array_filter(
+                $this->associatedResources,
+                static fn (string $arn): bool => $arn !== $resourceArn
+            ));
+        }
+
         public function getEmailIdentity(string $identity): ?array
         {
             return $this->identityExists ? $this->identityData : null;
@@ -235,6 +243,8 @@ it('checks if MAIL_FROM_ADDRESS matches ses identity', function () {
         }
 
         public function associateTenantResource(string $tenantName, string $resourceArn): void {}
+
+        public function disassociateTenantResource(string $tenantName, string $resourceArn): void {}
 
         public function getEmailIdentity(string $identity): ?array
         {

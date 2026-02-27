@@ -59,6 +59,8 @@ interface SesSnsProvisioningApi
 
     public function associateTenantResource(string $tenantName, string $resourceArn): void;
 
+    public function disassociateTenantResource(string $tenantName, string $resourceArn): void;
+
     /**
      * @return array<string, mixed>|null
      */
