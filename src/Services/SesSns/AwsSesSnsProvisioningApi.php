@@ -7,8 +7,11 @@ use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
 {
     protected object $sesV2;
+
     protected object $sns;
+
     protected object $sts;
+
     protected object $route53;
 
     public function __construct()
@@ -257,6 +260,16 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
             'EmailIdentity' => $identity,
             'MailFromDomain' => $mailFromDomain,
             'BehaviorOnMxFailure' => $behaviorOnMxFailure,
+        ]);
+    }
+
+    public function putEmailIdentityConfigurationSetAttributes(
+        string $identity,
+        string $configurationSetName,
+    ): void {
+        $this->sesV2->putEmailIdentityConfigurationSetAttributes([
+            'EmailIdentity' => $identity,
+            'ConfigurationSetName' => $configurationSetName,
         ]);
     }
 

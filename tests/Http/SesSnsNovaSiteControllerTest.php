@@ -125,6 +125,8 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
 
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;

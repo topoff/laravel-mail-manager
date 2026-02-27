@@ -49,6 +49,14 @@ class SesSendingSetupService
 
         $this->upsertDnsIfConfigured($identity, $dnsRecords, $steps);
 
+        $configurationSet = $this->configurationSetName();
+        if ($configurationSet !== null && $configurationSet !== '') {
+            $this->api->putEmailIdentityConfigurationSetAttributes($identity, $configurationSet);
+            $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Assigned to identity: '.$configurationSet];
+        } else {
+            $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Skipped (not configured).'];
+        }
+
         $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
         $steps[] = [
             'label' => 'SES verification status',
@@ -235,6 +243,13 @@ class SesSendingSetupService
         return (string) config('mail-manager.ses_sns.sending.mail_from_behavior_on_mx_failure', 'USE_DEFAULT_VALUE');
     }
 
+    protected function configurationSetName(): ?string
+    {
+        $value = trim((string) config('mail-manager.ses_sns.configuration_set', ''));
+
+        return $value !== '' ? $value : null;
+    }
+
     /**
      * @param  array<int, array{key: string, label: string, ok: bool, details: string}>  $checks
      */
@@ -255,4 +270,3 @@ class SesSendingSetupService
         }
     }
 }
-

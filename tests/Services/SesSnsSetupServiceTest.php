@@ -15,10 +15,15 @@ it('provisions missing ses/sns resources and returns green status', function () 
     $fake = new class implements SesSnsProvisioningApi
     {
         public string $accountId = '123456789012';
+
         public ?string $topicArn = null;
+
         public array $topicAttributes = [];
+
         public array $subscriptions = [];
+
         public bool $configurationSetExists = false;
+
         public ?array $eventDestination = null;
 
         public function getCallerAccountId(): string
@@ -125,6 +130,8 @@ it('provisions missing ses/sns resources and returns green status', function () 
 
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;
@@ -228,6 +235,8 @@ it('returns failing checks when topic is missing', function () {
 
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;
@@ -253,30 +262,100 @@ it('tears down existing ses/sns resources', function () {
     $fake = new class implements SesSnsProvisioningApi
     {
         public ?string $topicArn = 'arn:aws:sns:eu-central-1:123456789012:mail-manager-events';
+
         public bool $configurationSetExists = true;
+
         public ?array $eventDestination = ['Name' => 'mail-manager-sns'];
+
         public array $subscriptions = ['https://backend.example.test/email/sns'];
 
-        public function getCallerAccountId(): string { return '123456789012'; }
-        public function findTopicArnByName(string $topicName): ?string { return $this->topicArn; }
-        public function createTopic(string $topicName): string { return $this->topicArn ?? ''; }
-        public function getTopicAttributes(string $topicArn): array { return []; }
+        public function getCallerAccountId(): string
+        {
+            return '123456789012';
+        }
+
+        public function findTopicArnByName(string $topicName): ?string
+        {
+            return $this->topicArn;
+        }
+
+        public function createTopic(string $topicName): string
+        {
+            return $this->topicArn ?? '';
+        }
+
+        public function getTopicAttributes(string $topicArn): array
+        {
+            return [];
+        }
+
         public function setTopicPolicy(string $topicArn, string $policyJson): void {}
-        public function hasHttpsSubscription(string $topicArn, string $endpoint): bool { return in_array($endpoint, $this->subscriptions, true); }
-        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string { return in_array($endpoint, $this->subscriptions, true) ? 'arn:sub' : null; }
+
+        public function hasHttpsSubscription(string $topicArn, string $endpoint): bool
+        {
+            return in_array($endpoint, $this->subscriptions, true);
+        }
+
+        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string
+        {
+            return in_array($endpoint, $this->subscriptions, true) ? 'arn:sub' : null;
+        }
+
         public function subscribeHttps(string $topicArn, string $endpoint): void {}
-        public function unsubscribe(string $subscriptionArn): void { $this->subscriptions = []; }
-        public function deleteTopic(string $topicArn): void { $this->topicArn = null; }
-        public function configurationSetExists(string $configurationSetName): bool { return $this->configurationSetExists; }
+
+        public function unsubscribe(string $subscriptionArn): void
+        {
+            $this->subscriptions = [];
+        }
+
+        public function deleteTopic(string $topicArn): void
+        {
+            $this->topicArn = null;
+        }
+
+        public function configurationSetExists(string $configurationSetName): bool
+        {
+            return $this->configurationSetExists;
+        }
+
         public function createConfigurationSet(string $configurationSetName): void {}
-        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array { return $this->eventDestination; }
+
+        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array
+        {
+            return $this->eventDestination;
+        }
+
         public function upsertEventDestination(string $configurationSetName, string $eventDestinationName, string $topicArn, array $eventTypes, bool $enabled = true): void {}
-        public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void { $this->eventDestination = null; }
-        public function deleteConfigurationSet(string $configurationSetName): void { $this->configurationSetExists = false; }
-        public function getEmailIdentity(string $identity): ?array { return null; }
-        public function createEmailIdentity(string $identity): array { return []; }
+
+        public function deleteEventDestination(string $configurationSetName, string $eventDestinationName): void
+        {
+            $this->eventDestination = null;
+        }
+
+        public function deleteConfigurationSet(string $configurationSetName): void
+        {
+            $this->configurationSetExists = false;
+        }
+
+        public function getEmailIdentity(string $identity): ?array
+        {
+            return null;
+        }
+
+        public function createEmailIdentity(string $identity): array
+        {
+            return [];
+        }
+
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
-        public function findHostedZoneIdByDomain(string $domain): ?string { return null; }
+
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
+        public function findHostedZoneIdByDomain(string $domain): ?string
+        {
+            return null;
+        }
+
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     };
 
