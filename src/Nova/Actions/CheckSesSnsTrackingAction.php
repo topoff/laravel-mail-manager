@@ -26,18 +26,7 @@ class CheckSesSnsTrackingAction extends Action
         try {
             Log::info('mail-manager SES/SNS check action invoked.', [
                 'models_count' => $models->count(),
-                'enabled' => (bool) config('mail-manager.ses_sns.enabled', false),
             ]);
-
-            if (! (bool) config('mail-manager.ses_sns.enabled', false)) {
-                request()->user()?->notify(
-                    NovaNotification::make()
-                        ->message('SES/SNS check is disabled. Set mail-manager.ses_sns.enabled=true and try again.')
-                        ->type('error')
-                );
-
-                return ActionResponse::danger('SES/SNS check is disabled. Set mail-manager.ses_sns.enabled=true and try again.');
-            }
 
             $statusUrl = URL::temporarySignedRoute(
                 'mail-manager.ses-sns.site',

@@ -22,10 +22,6 @@ class SetupSesSnsTrackingAction extends Action
     public function handle(ActionFields $fields, Collection $models): mixed
     {
         try {
-            if (! (bool) config('mail-manager.ses_sns.enabled', false)) {
-                return Action::danger('SES/SNS setup is disabled. Set mail-manager.ses_sns.enabled=true and try again.');
-            }
-
             $statusUrl = URL::temporarySignedRoute(
                 'mail-manager.ses-sns.site',
                 now()->addMinutes(30)

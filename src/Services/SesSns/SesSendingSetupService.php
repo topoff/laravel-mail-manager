@@ -15,8 +15,6 @@ class SesSendingSetupService
      */
     public function setup(): array
     {
-        $this->assertFeatureEnabled();
-
         $steps = [];
         $identity = $this->identity();
         $identityData = $this->api->getEmailIdentity($identity);
@@ -78,8 +76,6 @@ class SesSendingSetupService
      */
     public function check(): array
     {
-        $this->assertFeatureEnabled();
-
         $checks = [];
         $identity = $this->identity();
         $identityData = $this->api->getEmailIdentity($identity);
@@ -261,12 +257,5 @@ class SesSendingSetupService
             'ok' => $ok,
             'details' => $details,
         ];
-    }
-
-    protected function assertFeatureEnabled(): void
-    {
-        if (! (bool) config('mail-manager.ses_sns.sending.enabled', false)) {
-            throw new RuntimeException('mail-manager.ses_sns.sending.enabled is false.');
-        }
     }
 }

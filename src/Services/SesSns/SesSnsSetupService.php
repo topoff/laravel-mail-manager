@@ -5,8 +5,8 @@ namespace Topoff\MailManager\Services\SesSns;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
-use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 use Throwable;
+use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 
 class SesSnsSetupService
 {
@@ -17,8 +17,6 @@ class SesSnsSetupService
      */
     public function setup(): array
     {
-        $this->assertFeatureEnabled();
-
         $steps = [];
 
         $accountId = $this->accountId();
@@ -42,8 +40,6 @@ class SesSnsSetupService
      */
     public function check(): array
     {
-        $this->assertFeatureEnabled();
-
         $configurationSet = $this->configurationSetName();
         $destinationName = $this->eventDestinationName();
         $topicArn = $this->resolveTopicArn();
@@ -141,8 +137,6 @@ class SesSnsSetupService
      */
     public function teardown(): array
     {
-        $this->assertFeatureEnabled();
-
         $steps = [];
         $topicArn = $this->resolveTopicArn();
         $endpoint = $this->callbackEndpoint();
@@ -462,13 +456,6 @@ class SesSnsSetupService
             'ok' => $ok,
             'details' => $details,
         ];
-    }
-
-    protected function assertFeatureEnabled(): void
-    {
-        if (! (bool) config('mail-manager.ses_sns.enabled', false)) {
-            throw new RuntimeException('mail-manager.ses_sns.enabled is false.');
-        }
     }
 
     protected function isPublicHttpsEndpoint(string $url): bool

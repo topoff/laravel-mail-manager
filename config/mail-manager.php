@@ -143,9 +143,6 @@ return [
     ],
 
     'ses_sns' => [
-        // Master switch for SES/SNS provisioning helpers.
-        'enabled' => false,
-
         'aws' => [
             'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -178,9 +175,6 @@ return [
         'enable_event_destination' => true,
 
         'sending' => [
-            // Master switch for sending setup helpers.
-            'enabled' => false,
-
             // Set one of these (domain preferred).
             // Example: 'identity_domain' => 'top-offerten.ch',
             'identity_domain' => null,

@@ -62,11 +62,9 @@ class SesSnsNovaSiteController extends Controller
             'app_config' => [
                 'aws_region' => (string) config('mail-manager.ses_sns.aws.region', ''),
                 'aws_profile' => (string) config('mail-manager.ses_sns.aws.profile', ''),
-                'sending_enabled' => (bool) config('mail-manager.ses_sns.sending.enabled', false),
                 'sending_identity_domain' => (string) config('mail-manager.ses_sns.sending.identity_domain', ''),
                 'sending_identity_email' => (string) config('mail-manager.ses_sns.sending.identity_email', ''),
                 'sending_mail_from_domain' => (string) config('mail-manager.ses_sns.sending.mail_from_domain', ''),
-                'tracking_enabled' => (bool) config('mail-manager.ses_sns.enabled', false),
                 'tracking_configuration_set' => (string) config('mail-manager.ses_sns.configuration_set', ''),
                 'tracking_event_destination' => (string) config('mail-manager.ses_sns.event_destination', ''),
                 'tracking_topic_name' => (string) config('mail-manager.ses_sns.topic_name', ''),
@@ -101,17 +99,6 @@ class SesSnsNovaSiteController extends Controller
      */
     protected function resolveSendingStatus(): array
     {
-        $enabled = (bool) config('mail-manager.ses_sns.sending.enabled', false);
-        if (! $enabled) {
-            return [
-                'enabled' => false,
-                'ok' => null,
-                'error' => 'Disabled. Set mail-manager.ses_sns.sending.enabled=true.',
-                'checks' => [],
-                'dns_records' => [],
-            ];
-        }
-
         try {
             $service = app(SesSendingSetupService::class);
             $status = $service->check();
@@ -146,18 +133,6 @@ class SesSnsNovaSiteController extends Controller
      */
     protected function resolveTrackingStatus(): array
     {
-        $enabled = (bool) config('mail-manager.ses_sns.enabled', false);
-        if (! $enabled) {
-            return [
-                'enabled' => false,
-                'ok' => null,
-                'error' => 'Disabled. Set mail-manager.ses_sns.enabled=true.',
-                'configuration' => [],
-                'checks' => [],
-                'aws_console' => [],
-            ];
-        }
-
         try {
             $service = app(SesSnsSetupService::class);
             $status = $service->check();

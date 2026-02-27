@@ -3,10 +3,7 @@
 use Illuminate\Support\Facades\URL;
 use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 
-it('renders the ses sns nova site with setup guidance when features are disabled', function () {
-    config()->set('mail-manager.ses_sns.enabled', false);
-    config()->set('mail-manager.ses_sns.sending.enabled', false);
-
+it('renders the ses sns nova site with setup guidance', function () {
     $url = URL::temporarySignedRoute('mail-manager.ses-sns.site', now()->addMinutes(10));
 
     $this->get($url)
@@ -15,9 +12,7 @@ it('renders the ses sns nova site with setup guidance when features are disabled
         ->assertSee('Setup Commands')
         ->assertSee('mail-manager:ses-sns:setup-sending')
         ->assertSee('mail-manager:ses-sns:setup-tracking')
-        ->assertSee('Required Environment Variables')
-        ->assertSee('Disabled. Set mail-manager.ses_sns.sending.enabled=true.')
-        ->assertSee('Disabled. Set mail-manager.ses_sns.enabled=true.');
+        ->assertSee('Required Environment Variables');
 });
 
 it('renders healthy sending and tracking checks on the ses sns nova site', function () {
