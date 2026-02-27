@@ -49,6 +49,13 @@ class SesSendingSetupService
 
         $configurationSet = $this->configurationSetName();
         if ($configurationSet !== null && $configurationSet !== '') {
+            if (! $this->api->configurationSetExists($configurationSet)) {
+                $this->api->createConfigurationSet($configurationSet);
+                $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Created: '.$configurationSet];
+            } else {
+                $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Already exists: '.$configurationSet];
+            }
+
             $this->api->putEmailIdentityConfigurationSetAttributes($identity, $configurationSet);
             $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Assigned to identity: '.$configurationSet];
         } else {

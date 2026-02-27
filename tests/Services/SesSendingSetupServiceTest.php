@@ -8,10 +8,15 @@ it('creates ses domain identity and returns required dns records', function () {
     config()->set('mail-manager.ses_sns.sending.identity_domain', 'example.com');
     config()->set('mail-manager.ses_sns.sending.mail_from_domain', 'mail.example.com');
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
+    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
 
     $fake = new class implements SesSnsProvisioningApi
     {
         public bool $identityExists = false;
+
+        public bool $configurationSetExists = false;
+
+        public ?array $assignedConfigurationSet = null;
 
         public array $identityData = [
             'VerifiedForSendingStatus' => false,
@@ -63,10 +68,13 @@ it('creates ses domain identity and returns required dns records', function () {
 
         public function configurationSetExists(string $configurationSetName): bool
         {
-            return false;
+            return $this->configurationSetExists;
         }
 
-        public function createConfigurationSet(string $configurationSetName): void {}
+        public function createConfigurationSet(string $configurationSetName): void
+        {
+            $this->configurationSetExists = true;
+        }
 
         public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array
         {
@@ -93,7 +101,13 @@ it('creates ses domain identity and returns required dns records', function () {
 
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
-        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+        public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void
+        {
+            $this->assignedConfigurationSet = [
+                'identity' => $identity,
+                'configuration_set' => $configurationSetName,
+            ];
+        }
 
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
@@ -107,5 +121,10 @@ it('creates ses domain identity and returns required dns records', function () {
     $result = $service->setup();
 
     expect($result['ok'])->toBeTrue()
-        ->and(count($result['dns_records']))->toBe(5);
+        ->and(count($result['dns_records']))->toBe(5)
+        ->and($fake->configurationSetExists)->toBeTrue()
+        ->and($fake->assignedConfigurationSet)->toBe([
+            'identity' => 'example.com',
+            'configuration_set' => 'mail-manager-tracking',
+        ]);
 });
