@@ -107,5 +107,16 @@ class MainBulkMailHandler
     /**
      * @throws MissingGroupableMailTypeInterfaceException
      */
-    protected function throwExceptionOnMissingInterface(MainMailHandler $mailHandler): void {}
+    protected function throwExceptionOnMissingInterface(MainMailHandler $mailHandler): void
+    {
+        if (! $mailHandler instanceof GroupableMailTypeInterface) {
+            throw new MissingGroupableMailTypeInterfaceException(
+                sprintf(
+                    'MailHandler "%s" must implement "%s" to be used with bulk mail.',
+                    $mailHandler::class,
+                    GroupableMailTypeInterface::class,
+                ),
+            );
+        }
+    }
 }

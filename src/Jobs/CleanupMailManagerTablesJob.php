@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CleanupMailManagerTablesJob implements ShouldQueue
 {
@@ -30,11 +32,20 @@ class CleanupMailManagerTablesJob implements ShouldQueue
         }
 
         $messageModelClass = $this->modelClass('mail-manager.models.message');
-        $query = $this->queryWithTrashed($messageModelClass)
-            ->whereNotNull('tracking_content')
-            ->where('created_at', '<', now()->subDays($days));
+        $cutoff = now()->subDays($days);
 
-        $query->update(['tracking_content' => null]);
+        // Clean up database-stored tracking content
+        $this->queryWithTrashed($messageModelClass)
+            ->whereNotNull('tracking_content')
+            ->where('created_at', '<', $cutoff)
+            ->update(['tracking_content' => null]);
+
+        // Clean up filesystem-stored tracking content
+        $this->deleteTrackingFiles(
+            $this->queryWithTrashed($messageModelClass)
+                ->whereNotNull('tracking_content_path')
+                ->where('created_at', '<', $cutoff),
+        );
     }
 
     protected function cleanupMessages(): void
@@ -47,6 +58,9 @@ class CleanupMailManagerTablesJob implements ShouldQueue
         $messageModelClass = $this->modelClass('mail-manager.models.message');
         $query = $this->queryWithTrashed($messageModelClass)
             ->where('created_at', '<', now()->subMonths($months));
+
+        // Delete filesystem tracking files before removing DB records
+        $this->deleteTrackingFiles(clone $query);
 
         $this->deleteQuery($query, $messageModelClass);
     }
@@ -75,6 +89,38 @@ class CleanupMailManagerTablesJob implements ShouldQueue
         $notificationLogModelClass::query()
             ->where('created_at', '<', now()->subMonths($months))
             ->delete();
+    }
+
+    protected function deleteTrackingFiles($query): void
+    {
+        $disk = config('mail-manager.tracking.tracker_filesystem');
+        $storage = $disk ? Storage::disk($disk) : Storage::disk();
+
+        $query->whereNotNull('tracking_content_path')
+            ->chunkById(500, function ($messages) use ($storage): void {
+                $paths = [];
+
+                foreach ($messages as $message) {
+                    if ($message->tracking_content_path) {
+                        $paths[] = $message->tracking_content_path;
+                    }
+                }
+
+                if ($paths !== []) {
+                    try {
+                        $storage->delete($paths);
+                    } catch (\Throwable $e) {
+                        Log::warning('CleanupMailManagerTablesJob: Failed to delete tracking files.', [
+                            'error' => $e->getMessage(),
+                            'paths_count' => count($paths),
+                        ]);
+                    }
+
+                    $messageClass = config('mail-manager.models.message');
+                    $messageClass::whereIn('id', $messages->pluck('id'))
+                        ->update(['tracking_content_path' => null]);
+                }
+            });
     }
 
     /**

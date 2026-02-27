@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Topoff\MailManager\Events\MessagePermanentBouncedEvent;
 use Topoff\MailManager\Events\MessageTransientBouncedEvent;
 
@@ -28,6 +29,14 @@ class RecordBounceJob implements ShouldQueue
     {
         $messageId = data_get($this->message, 'mail.messageId');
         if (! $messageId) {
+            Log::warning('RecordBounceJob: Missing mail.messageId in SNS payload', ['payload_keys' => array_keys($this->message)]);
+
+            return;
+        }
+
+        if (! data_get($this->message, 'bounce')) {
+            Log::warning('RecordBounceJob: Missing bounce data in SNS payload', ['messageId' => $messageId]);
+
             return;
         }
 

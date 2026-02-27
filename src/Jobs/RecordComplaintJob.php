@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Topoff\MailManager\Events\MessageComplaintEvent;
 
 class RecordComplaintJob implements ShouldQueue
@@ -27,6 +28,14 @@ class RecordComplaintJob implements ShouldQueue
     {
         $messageId = data_get($this->message, 'mail.messageId');
         if (! $messageId) {
+            Log::warning('RecordComplaintJob: Missing mail.messageId in SNS payload', ['payload_keys' => array_keys($this->message)]);
+
+            return;
+        }
+
+        if (! data_get($this->message, 'complaint')) {
+            Log::warning('RecordComplaintJob: Missing complaint data in SNS payload', ['messageId' => $messageId]);
+
             return;
         }
 

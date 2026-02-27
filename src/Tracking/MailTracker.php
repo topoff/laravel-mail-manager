@@ -7,6 +7,7 @@ use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Mail\SentMessage;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -21,46 +22,60 @@ class MailTracker
 {
     public function messageSending(MessageSending $event): void
     {
-        $messageModels = $this->resolveMessageModels($event);
-        if ($messageModels->isEmpty()) {
-            return;
+        try {
+            $messageModels = $this->resolveMessageModels($event);
+            if ($messageModels->isEmpty()) {
+                return;
+            }
+
+            $message = $event->message;
+            if ($message->getHeaders()->has('X-No-Track')) {
+                return;
+            }
+
+            $hash = $this->generateHash();
+            $message->getHeaders()->addTextHeader('X-Mailer-Hash', $hash);
+
+            [$html, $mutated] = $this->injectTrackers($message, $hash);
+
+            $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
+        } catch (\Throwable $e) {
+            Log::error('MailTracker: Failed to inject tracking into email, sending without tracking.', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile().':'.$e->getLine(),
+            ]);
         }
-
-        $message = $event->message;
-        if ($message->getHeaders()->has('X-No-Track')) {
-            return;
-        }
-
-        $hash = $this->generateHash();
-        $message->getHeaders()->addTextHeader('X-Mailer-Hash', $hash);
-
-        [$html, $mutated] = $this->injectTrackers($message, $hash);
-
-        $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
     }
 
     public function messageSent(MessageSent $event): void
     {
-        $originalMessage = $event->sent->getOriginalMessage();
-        if (! $originalMessage instanceof Email) {
-            return;
-        }
+        try {
+            $originalMessage = $event->sent->getOriginalMessage();
+            if (! $originalMessage instanceof Email) {
+                return;
+            }
 
-        $hash = $originalMessage->getHeaders()->get('X-Mailer-Hash')?->getBodyAsString();
-        if (! $hash) {
-            return;
-        }
+            $hash = $originalMessage->getHeaders()->get('X-Mailer-Hash')?->getBodyAsString();
+            if (! $hash) {
+                return;
+            }
 
-        /** @var Collection<int, Message> $messages */
-        $messages = $this->messageModelClass()::query()->where('tracking_hash', $hash)->get();
-        if ($messages->isEmpty()) {
-            return;
-        }
+            /** @var Collection<int, Message> $messages */
+            $messages = $this->messageModelClass()::query()->where('tracking_hash', $hash)->get();
+            if ($messages->isEmpty()) {
+                return;
+            }
 
-        $messageId = $this->resolveMessageId($event->sent);
-        $this->messageModelClass()::query()->where('tracking_hash', $hash)->update([
-            'tracking_message_id' => $messageId,
-        ]);
+            $messageId = $this->resolveMessageId($event->sent);
+            $this->messageModelClass()::query()->where('tracking_hash', $hash)->update([
+                'tracking_message_id' => $messageId,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('MailTracker: Failed to persist tracking message ID after sending.', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile().':'.$e->getLine(),
+            ]);
+        }
     }
 
     protected function resolveMessageModels(MessageSending $event): Collection
