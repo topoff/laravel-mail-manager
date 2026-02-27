@@ -82,6 +82,10 @@ return [
         'check_should_add_bcc' => null,
     ],
 
+    'notifications' => [
+        'default_message_footer' => '',
+    ],
+
     'tracking' => [
         // To disable the pixel injection, set this to false.
         'inject_pixel' => false,
