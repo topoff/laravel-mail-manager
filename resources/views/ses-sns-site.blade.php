@@ -29,6 +29,9 @@
         .fail { background: #fee2e2; color: var(--fail); }
         .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
         .button-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+        .actions-layout { display: grid; gap: 14px; }
+        .actions-group { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #fcfdff; }
+        .actions-group h3 { margin-bottom: 8px; }
         .command-button { width: 100%; border: 1px solid var(--line); background: #f9fafb; color: #111827; border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer; text-align: left; }
         .command-button:hover { border-color: #cbd5e1; background: #f3f4f6; }
         .link-button { display: inline-block; border: 1px solid var(--line); background: #111827; color: #fff; border-radius: 10px; padding: 10px 12px; font-weight: 700; text-decoration: none; }
@@ -81,22 +84,34 @@
         </div>
     </div>
 
-    <div class="card">
-        <h2>Setup Commands</h2>
-        <pre>@foreach($commands as $command){{ $command }}
-@endforeach</pre>
-    </div>
-
     <div class="card" id="command-results">
         <h2>Actions</h2>
         <p><a class="link-button" href="{{ $custom_mail_action_url }}" target="_blank" rel="noopener">Open Custom Mail Action</a></p>
-        <div class="button-grid">
-            @foreach((array) $command_buttons as $button)
-                <form method="POST" action="{{ data_get($button, 'url') }}">
-                    @csrf
-                    <button type="submit" class="command-button">{{ data_get($button, 'label') }}</button>
-                    <p class="command-desc">{{ data_get($button, 'description') }}</p>
-                </form>
+        @php
+            $allButtons = collect((array) $command_buttons);
+            $groupedButtons = [
+                'Setup' => $allButtons->filter(fn (array $button): bool => str_starts_with((string) data_get($button, 'label', ''), 'Setup')),
+                'Checks' => $allButtons->filter(fn (array $button): bool => str_starts_with((string) data_get($button, 'label', ''), 'Check')),
+                'Simulator Tests' => $allButtons->filter(fn (array $button): bool => str_starts_with((string) data_get($button, 'label', ''), 'Test') && ! str_contains((string) data_get($button, 'label', ''), 'DB Verify')),
+                'Simulator + DB Verify' => $allButtons->filter(fn (array $button): bool => str_contains((string) data_get($button, 'label', ''), 'DB Verify')),
+                'Cleanup' => $allButtons->filter(fn (array $button): bool => str_starts_with((string) data_get($button, 'label', ''), 'Teardown')),
+            ];
+        @endphp
+        <div class="actions-layout">
+            @foreach($groupedButtons as $groupLabel => $buttons)
+                @continue($buttons->isEmpty())
+                <div class="actions-group">
+                    <h3>{{ $groupLabel }}</h3>
+                    <div class="button-grid">
+                        @foreach($buttons as $button)
+                            <form method="POST" action="{{ data_get($button, 'url') }}">
+                                @csrf
+                                <button type="submit" class="command-button">{{ data_get($button, 'label') }}</button>
+                                <p class="command-desc">{{ data_get($button, 'description') }}</p>
+                            </form>
+                        @endforeach
+                    </div>
+                </div>
             @endforeach
         </div>
 
@@ -243,6 +258,12 @@
                 <li><a href="{{ data_get($tracking, 'aws_console.sns_subscriptions', '#') }}" target="_blank" rel="noopener">SNS Subscriptions</a></li>
             </ul>
         </div>
+    </div>
+
+    <div class="card">
+        <h2>Setup Commands</h2>
+        <pre>@foreach($commands as $command){{ $command }}
+@endforeach</pre>
     </div>
 </div>
 </body>
