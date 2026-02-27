@@ -16,6 +16,7 @@ class SesSendingSetupService
     public function setup(): array
     {
         $steps = [];
+        $configurationSets = $this->configurationSets();
         $identity = $this->identity();
         $identityData = $this->api->getEmailIdentity($identity);
 
@@ -47,22 +48,35 @@ class SesSendingSetupService
 
         $this->upsertDnsIfConfigured($identity, $dnsRecords, $steps);
 
-        $configurationSet = $this->configurationSetName();
-        if ($configurationSet !== null && $configurationSet !== '') {
-            if (! $this->api->configurationSetExists($configurationSet)) {
-                $this->api->createConfigurationSet($configurationSet);
-                $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Created: '.$configurationSet];
-            } else {
-                $steps[] = ['label' => 'SES configuration set', 'ok' => true, 'details' => 'Already exists: '.$configurationSet];
+        $defaultConfigSet = null;
+        foreach ($configurationSets as $key => $set) {
+            $configSetName = (string) ($set['configuration_set'] ?? '');
+            $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
+
+            if ($configSetName === '') {
+                continue;
             }
 
-            $this->api->putEmailIdentityConfigurationSetAttributes($identity, $configurationSet);
-            $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Assigned to identity: '.$configurationSet];
+            if (! $this->api->configurationSetExists($configSetName)) {
+                $this->api->createConfigurationSet($configSetName);
+                $steps[] = ['label' => 'SES configuration set'.$suffix, 'ok' => true, 'details' => 'Created: '.$configSetName];
+            } else {
+                $steps[] = ['label' => 'SES configuration set'.$suffix, 'ok' => true, 'details' => 'Already exists: '.$configSetName];
+            }
+
+            if ($defaultConfigSet === null) {
+                $defaultConfigSet = $configSetName;
+            }
+        }
+
+        if ($defaultConfigSet !== null) {
+            $this->api->putEmailIdentityConfigurationSetAttributes($identity, $defaultConfigSet);
+            $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Assigned to identity: '.$defaultConfigSet];
         } else {
             $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Skipped (not configured).'];
         }
 
-        $this->associateTenantIfConfigured($identity, $configurationSet, $steps);
+        $this->associateTenantIfConfigured($identity, $configurationSets, $steps);
 
         $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
         $steps[] = [
@@ -86,6 +100,7 @@ class SesSendingSetupService
     public function check(): array
     {
         $checks = [];
+        $configurationSets = $this->configurationSets();
         $identity = $this->identity();
         $identityData = $this->api->getEmailIdentity($identity);
 
@@ -158,17 +173,22 @@ class SesSendingSetupService
                     $identityAssociated ? $identityArn : 'Missing association for: '.$identityArn
                 );
 
-                $configurationSetName = $this->configurationSetName();
-                if ($configurationSetName !== null && $configurationSetName !== '') {
-                    $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSetName);
-                    $configurationSetAssociated = $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn);
-                    $this->addCheck(
-                        $checks,
-                        'tenant_configuration_set_association',
-                        'SES tenant has configuration set association',
-                        $configurationSetAssociated,
-                        $configurationSetAssociated ? $configurationSetArn : 'Missing association for: '.$configurationSetArn
-                    );
+                foreach ($configurationSets as $key => $set) {
+                    $configSetName = (string) ($set['configuration_set'] ?? '');
+                    $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
+                    $keySuffix = count($configurationSets) > 1 ? "_{$key}" : '';
+
+                    if ($configSetName !== '') {
+                        $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configSetName);
+                        $configurationSetAssociated = $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn);
+                        $this->addCheck(
+                            $checks,
+                            'tenant_configuration_set_association'.$keySuffix,
+                            'SES tenant has configuration set association'.$suffix,
+                            $configurationSetAssociated,
+                            $configurationSetAssociated ? $configurationSetArn : 'Missing association for: '.$configurationSetArn
+                        );
+                    }
                 }
             }
         }
@@ -180,6 +200,20 @@ class SesSendingSetupService
             'checks' => $checks,
             'dns_records' => $dnsRecords,
         ];
+    }
+
+    /**
+     * @return array<string, array{configuration_set: string, event_destination: string}>
+     */
+    protected function configurationSets(): array
+    {
+        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+
+        if ($sets === []) {
+            throw new RuntimeException('No configuration sets configured. Set mail-manager.ses_sns.configuration_sets.');
+        }
+
+        return $sets;
     }
 
     /**
@@ -318,13 +352,6 @@ class SesSendingSetupService
         return (string) config('mail-manager.ses_sns.sending.mail_from_behavior_on_mx_failure', 'USE_DEFAULT_VALUE');
     }
 
-    protected function configurationSetName(): ?string
-    {
-        $value = trim((string) config('mail-manager.ses_sns.configuration_set', ''));
-
-        return $value !== '' ? $value : null;
-    }
-
     protected function tenantName(): ?string
     {
         $value = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
@@ -333,9 +360,10 @@ class SesSendingSetupService
     }
 
     /**
+     * @param  array<string, array{configuration_set: string, event_destination: string}>  $configurationSets
      * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
      */
-    protected function associateTenantIfConfigured(string $identity, ?string $configurationSet, array &$steps): void
+    protected function associateTenantIfConfigured(string $identity, array $configurationSets, array &$steps): void
     {
         $tenantName = $this->tenantName();
         if ($tenantName === null) {
@@ -362,18 +390,23 @@ class SesSendingSetupService
             $steps[] = ['label' => 'SES tenant identity association', 'ok' => true, 'details' => 'Already associated: '.$identityArn];
         }
 
-        if ($configurationSet === null || $configurationSet === '') {
-            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Skipped (configuration set not configured).'];
+        foreach ($configurationSets as $key => $set) {
+            $configSetName = (string) ($set['configuration_set'] ?? '');
+            $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
 
-            return;
-        }
+            if ($configSetName === '') {
+                $steps[] = ['label' => 'SES tenant configuration set association'.$suffix, 'ok' => true, 'details' => 'Skipped (configuration set not configured).'];
 
-        $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSet);
-        if (! $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn)) {
-            $this->api->associateTenantResource($tenantName, $configurationSetArn);
-            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Associated: '.$configurationSetArn];
-        } else {
-            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Already associated: '.$configurationSetArn];
+                continue;
+            }
+
+            $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configSetName);
+            if (! $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn)) {
+                $this->api->associateTenantResource($tenantName, $configurationSetArn);
+                $steps[] = ['label' => 'SES tenant configuration set association'.$suffix, 'ok' => true, 'details' => 'Associated: '.$configurationSetArn];
+            } else {
+                $steps[] = ['label' => 'SES tenant configuration set association'.$suffix, 'ok' => true, 'details' => 'Already associated: '.$configurationSetArn];
+            }
         }
     }
 

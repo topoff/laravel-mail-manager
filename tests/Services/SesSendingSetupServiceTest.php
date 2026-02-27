@@ -8,7 +8,12 @@ it('creates ses domain identity and returns required dns records', function () {
     config()->set('mail-manager.ses_sns.sending.identity_domain', 'example.com');
     config()->set('mail-manager.ses_sns.sending.mail_from_domain', 'mail.example.com');
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
-    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.tenant.name', 'topofferten');
 
     $fake = new class implements SesSnsProvisioningApi

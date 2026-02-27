@@ -152,7 +152,7 @@ class TestSesSnsEventsCommand extends Command
             return $value;
         }
 
-        $configValue = trim((string) config('mail-manager.ses_sns.configuration_set', ''));
+        $configValue = trim((string) config('mail-manager.ses_sns.configuration_sets.default.configuration_set', ''));
 
         return $configValue !== '' ? $configValue : null;
     }

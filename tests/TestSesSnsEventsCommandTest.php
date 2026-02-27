@@ -4,7 +4,12 @@ use Topoff\MailManager\Services\SesSns\SesEventSimulatorService;
 
 it('sends simulator scenarios and creates message records', function () {
     config()->set('mail.from.address', 'sender@example.com');
-    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.tenant.name', 'tenant-a');
 
     $fake = new class extends SesEventSimulatorService

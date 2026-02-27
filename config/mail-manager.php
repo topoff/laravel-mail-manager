@@ -158,9 +158,22 @@ return [
             'account_id' => null,
         ],
 
-        // SES v2 resources managed by this package.
-        'configuration_set' => 'mail-manager-tracking',
-        'event_destination' => 'mail-manager-sns',
+        // SES v2 configuration sets managed by this package.
+        // Each key is a logical name; values specify the AWS resource names.
+        'configuration_sets' => [
+            'default' => [
+                'configuration_set' => 'mail-manager-tracking',
+                'event_destination' => 'mail-manager-sns',
+            ],
+            // 'transactional' => [
+            //     'configuration_set' => 'mail-manager-transactional',
+            //     'event_destination' => 'mail-manager-transactional-sns',
+            // ],
+            // 'marketing' => [
+            //     'configuration_set' => 'mail-manager-marketing',
+            //     'event_destination' => 'mail-manager-marketing-sns',
+            // ],
+        ],
 
         // SNS resources managed by this package.
         'topic_name' => 'mail-manager-ses-events',

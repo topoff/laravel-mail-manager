@@ -65,6 +65,11 @@ class MessageType extends Resource
             Text::make('Bulk Message Line', 'bulk_message_line')
                 ->displayUsing(fn (?string $text): string => Str::limit((string) $text, 120))
                 ->hideFromIndex(),
+            Text::make('SES Configuration Set', 'ses_configuration_set')
+                ->nullable()
+                ->sortable()
+                ->help('Config key (e.g. "default", "transactional", "marketing"). Leave empty to use identity default.')
+                ->hideFromIndex(),
             DateTime::make('Created At', 'created_at')->sortable()->hideFromIndex(),
             DateTime::make('Updated At', 'updated_at')->nullable()->hideFromIndex(),
             DateTime::make('Deleted At', 'deleted_at')->nullable()->hideFromIndex(),

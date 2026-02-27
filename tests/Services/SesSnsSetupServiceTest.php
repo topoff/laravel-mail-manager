@@ -7,8 +7,12 @@ it('provisions missing ses/sns resources and returns green status', function () 
     config()->set('mail-manager.ses_sns.enabled', true);
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
     config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
-    config()->set('mail-manager.ses_sns.event_destination', 'mail-manager-sns');
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://mail-manager-demo.ngrok-free.app/email/sns');
     config()->set('mail-manager.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
 
@@ -171,8 +175,12 @@ it('provisions missing ses/sns resources and returns green status', function () 
 it('returns failing checks when topic is missing', function () {
     config()->set('mail-manager.ses_sns.enabled', true);
     config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
-    config()->set('mail-manager.ses_sns.event_destination', 'mail-manager-sns');
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
 
     $fake = new class implements SesSnsProvisioningApi
@@ -290,8 +298,12 @@ it('tears down existing ses/sns resources', function () {
     config()->set('mail-manager.ses_sns.aws.account_id', '123456789012');
     config()->set('mail-manager.ses_sns.tenant.name', 'tenant-a');
     config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
-    config()->set('mail-manager.ses_sns.event_destination', 'mail-manager-sns');
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
 
     $fake = new class implements SesSnsProvisioningApi

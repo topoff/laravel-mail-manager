@@ -20,8 +20,12 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
     config()->set('mail-manager.ses_sns.sending.enabled', true);
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
     config()->set('mail-manager.ses_sns.topic_name', 'mail-manager-events');
-    config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
-    config()->set('mail-manager.ses_sns.event_destination', 'mail-manager-sns');
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
     config()->set('mail-manager.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
     config()->set('mail-manager.ses_sns.sending.identity_domain', 'example.com');

@@ -39,6 +39,7 @@ class MailTracker
             [$html, $mutated] = $this->injectTrackers($message, $hash);
 
             $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
+            $this->injectConfigurationSetHeader($messageModels, $message);
         } catch (\Throwable $e) {
             Log::error('MailTracker: Failed to inject tracking into email, sending without tracking.', [
                 'error' => $e->getMessage(),
@@ -237,6 +238,32 @@ class MailTracker
         $maxSize = (int) config('mail-manager.tracking.content_max_size', 65535);
         $messageModel->tracking_content = mb_substr($html, 0, $maxSize);
         $messageModel->tracking_content_path = null;
+    }
+
+    /**
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function injectConfigurationSetHeader(Collection $messageModels, Email $message): void
+    {
+        if ($message->getHeaders()->has('X-SES-CONFIGURATION-SET')) {
+            return;
+        }
+
+        $configSetKey = $messageModels->first()?->messageType?->ses_configuration_set;
+        if (! $configSetKey) {
+            return;
+        }
+
+        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+        $awsName = $sets[$configSetKey]['configuration_set'] ?? null;
+
+        if (! $awsName) {
+            Log::warning("MailTracker: Unknown configuration set key '{$configSetKey}'");
+
+            return;
+        }
+
+        $message->getHeaders()->addTextHeader('X-SES-CONFIGURATION-SET', $awsName);
     }
 
     protected function resolveMessageId(SentMessage $message): ?string

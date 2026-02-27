@@ -150,7 +150,7 @@
                         @if(is_bool($value))
                             <code>{{ $value ? 'true' : 'false' }}</code>
                         @elseif(is_array($value))
-                            <code>{{ implode(', ', $value) }}</code>
+                            <code>{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code>
                         @else
                             <code>{{ $value !== '' ? (string) $value : '(empty)' }}</code>
                         @endif

@@ -51,7 +51,7 @@
                     <th>{{ $key }}</th>
                     <td>
                         @if(is_array($value))
-                            <code>{{ implode(', ', $value) }}</code>
+                            <code>{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code>
                         @else
                             <code>{{ (string) $value }}</code>
                         @endif
