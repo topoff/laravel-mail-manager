@@ -132,6 +132,20 @@ it('provisions missing ses/sns resources and returns green status', function () 
 
         public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
 
+        public function tenantExists(string $tenantName): bool
+        {
+            return false;
+        }
+
+        public function createTenant(string $tenantName): void {}
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return false;
+        }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;
@@ -236,6 +250,20 @@ it('returns failing checks when topic is missing', function () {
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
         public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
+        public function tenantExists(string $tenantName): bool
+        {
+            return false;
+        }
+
+        public function createTenant(string $tenantName): void {}
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return false;
+        }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void {}
 
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
@@ -350,6 +378,20 @@ it('tears down existing ses/sns resources', function () {
         public function putEmailIdentityMailFromAttributes(string $identity, string $mailFromDomain, string $behaviorOnMxFailure = 'USE_DEFAULT_VALUE'): void {}
 
         public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
+
+        public function tenantExists(string $tenantName): bool
+        {
+            return false;
+        }
+
+        public function createTenant(string $tenantName): void {}
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return false;
+        }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void {}
 
         public function findHostedZoneIdByDomain(string $domain): ?string
         {

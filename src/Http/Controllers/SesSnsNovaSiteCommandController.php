@@ -57,6 +57,11 @@ class SesSnsNovaSiteCommandController extends Controller
     protected function commands(): array
     {
         return [
+            'setup-all' => [
+                'label' => 'Setup SES/SNS All',
+                'command' => 'mail-manager:ses-sns:setup-all',
+                'parameters' => ['--no-interaction' => true],
+            ],
             'setup-sending' => [
                 'label' => 'Setup SES Sending',
                 'command' => 'mail-manager:ses-sns:setup-sending',

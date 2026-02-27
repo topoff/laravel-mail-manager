@@ -62,6 +62,8 @@ class SesSendingSetupService
             $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Skipped (not configured).'];
         }
 
+        $this->associateTenantIfConfigured($identity, $configurationSet, $steps);
+
         $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
         $steps[] = [
             'label' => 'SES verification status',
@@ -114,6 +116,39 @@ class SesSendingSetupService
                 in_array($mailFromStatus, ['SUCCESS', 'PENDING'], true),
                 $mailFromStatus !== '' ? $mailFromStatus : 'Not set'
             );
+        }
+
+        $tenantName = $this->tenantName();
+        if ($tenantName !== null) {
+            $tenantExists = $this->api->tenantExists($tenantName);
+            $this->addCheck($checks, 'tenant_exists', 'SES tenant exists', $tenantExists, $tenantName);
+
+            if ($tenantExists) {
+                $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+                $accountId = $this->api->getCallerAccountId();
+                $identityArn = sprintf('arn:aws:ses:%s:%s:identity/%s', $region, $accountId, $identity);
+                $identityAssociated = $this->api->tenantHasResourceAssociation($tenantName, $identityArn);
+                $this->addCheck(
+                    $checks,
+                    'tenant_identity_association',
+                    'SES tenant has identity association',
+                    $identityAssociated,
+                    $identityAssociated ? $identityArn : 'Missing association for: '.$identityArn
+                );
+
+                $configurationSetName = $this->configurationSetName();
+                if ($configurationSetName !== null && $configurationSetName !== '') {
+                    $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSetName);
+                    $configurationSetAssociated = $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn);
+                    $this->addCheck(
+                        $checks,
+                        'tenant_configuration_set_association',
+                        'SES tenant has configuration set association',
+                        $configurationSetAssociated,
+                        $configurationSetAssociated ? $configurationSetArn : 'Missing association for: '.$configurationSetArn
+                    );
+                }
+            }
         }
 
         $ok = collect($checks)->every(fn (array $check): bool => $check['ok'] === true);
@@ -251,6 +286,58 @@ class SesSendingSetupService
         $value = trim((string) config('mail-manager.ses_sns.configuration_set', ''));
 
         return $value !== '' ? $value : null;
+    }
+
+    protected function tenantName(): ?string
+    {
+        $value = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    /**
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function associateTenantIfConfigured(string $identity, ?string $configurationSet, array &$steps): void
+    {
+        $tenantName = $this->tenantName();
+        if ($tenantName === null) {
+            $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Skipped (not configured).'];
+
+            return;
+        }
+
+        if (! $this->api->tenantExists($tenantName)) {
+            $this->api->createTenant($tenantName);
+            $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Created: '.$tenantName];
+        } else {
+            $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Already exists: '.$tenantName];
+        }
+
+        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $accountId = $this->api->getCallerAccountId();
+        $identityArn = sprintf('arn:aws:ses:%s:%s:identity/%s', $region, $accountId, $identity);
+
+        if (! $this->api->tenantHasResourceAssociation($tenantName, $identityArn)) {
+            $this->api->associateTenantResource($tenantName, $identityArn);
+            $steps[] = ['label' => 'SES tenant identity association', 'ok' => true, 'details' => 'Associated: '.$identityArn];
+        } else {
+            $steps[] = ['label' => 'SES tenant identity association', 'ok' => true, 'details' => 'Already associated: '.$identityArn];
+        }
+
+        if ($configurationSet === null || $configurationSet === '') {
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Skipped (configuration set not configured).'];
+
+            return;
+        }
+
+        $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSet);
+        if (! $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn)) {
+            $this->api->associateTenantResource($tenantName, $configurationSetArn);
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Associated: '.$configurationSetArn];
+        } else {
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Already associated: '.$configurationSetArn];
+        }
     }
 
     /**

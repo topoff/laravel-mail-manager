@@ -224,6 +224,62 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
         ]);
     }
 
+    public function tenantExists(string $tenantName): bool
+    {
+        try {
+            $this->sesV2->getTenant(['TenantName' => $tenantName]);
+
+            return true;
+        } catch (\Throwable $e) {
+            $errorCode = method_exists($e, 'getAwsErrorCode') ? (string) $e->getAwsErrorCode() : '';
+            if ($errorCode === 'NotFoundException') {
+                return false;
+            }
+
+            throw $e;
+        }
+    }
+
+    public function createTenant(string $tenantName): void
+    {
+        $this->sesV2->createTenant([
+            'TenantName' => $tenantName,
+        ]);
+    }
+
+    public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+    {
+        $nextToken = null;
+
+        do {
+            $params = ['TenantName' => $tenantName];
+            if ($nextToken !== null && $nextToken !== '') {
+                $params['NextToken'] = $nextToken;
+            }
+
+            $result = $this->sesV2->listTenantResources($params);
+            $resources = (array) ($result['TenantResources'] ?? []);
+
+            foreach ($resources as $resource) {
+                if (($resource['ResourceArn'] ?? null) === $resourceArn) {
+                    return true;
+                }
+            }
+
+            $nextToken = (string) ($result['NextToken'] ?? '');
+        } while ($nextToken !== '');
+
+        return false;
+    }
+
+    public function associateTenantResource(string $tenantName, string $resourceArn): void
+    {
+        $this->sesV2->createTenantResourceAssociation([
+            'TenantName' => $tenantName,
+            'ResourceArn' => $resourceArn,
+        ]);
+    }
+
     public function getEmailIdentity(string $identity): ?array
     {
         try {

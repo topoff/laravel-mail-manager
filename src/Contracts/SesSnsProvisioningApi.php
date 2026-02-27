@@ -51,6 +51,14 @@ interface SesSnsProvisioningApi
 
     public function deleteConfigurationSet(string $configurationSetName): void;
 
+    public function tenantExists(string $tenantName): bool;
+
+    public function createTenant(string $tenantName): void;
+
+    public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool;
+
+    public function associateTenantResource(string $tenantName, string $resourceArn): void;
+
     /**
      * @return array<string, mixed>|null
      */

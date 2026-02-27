@@ -9,6 +9,7 @@ it('creates ses domain identity and returns required dns records', function () {
     config()->set('mail-manager.ses_sns.sending.mail_from_domain', 'mail.example.com');
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
     config()->set('mail-manager.ses_sns.configuration_set', 'mail-manager-tracking');
+    config()->set('mail-manager.ses_sns.tenant.name', 'topofferten');
 
     $fake = new class implements SesSnsProvisioningApi
     {
@@ -17,6 +18,11 @@ it('creates ses domain identity and returns required dns records', function () {
         public bool $configurationSetExists = false;
 
         public ?array $assignedConfigurationSet = null;
+
+        public bool $tenantExists = false;
+
+        /** @var array<int, string> */
+        public array $associatedResources = [];
 
         public array $identityData = [
             'VerifiedForSendingStatus' => false,
@@ -87,6 +93,26 @@ it('creates ses domain identity and returns required dns records', function () {
 
         public function deleteConfigurationSet(string $configurationSetName): void {}
 
+        public function tenantExists(string $tenantName): bool
+        {
+            return $this->tenantExists;
+        }
+
+        public function createTenant(string $tenantName): void
+        {
+            $this->tenantExists = true;
+        }
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return in_array($resourceArn, $this->associatedResources, true);
+        }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void
+        {
+            $this->associatedResources[] = $resourceArn;
+        }
+
         public function getEmailIdentity(string $identity): ?array
         {
             return $this->identityExists ? $this->identityData : null;
@@ -126,5 +152,10 @@ it('creates ses domain identity and returns required dns records', function () {
         ->and($fake->assignedConfigurationSet)->toBe([
             'identity' => 'example.com',
             'configuration_set' => 'mail-manager-tracking',
-        ]);
+        ])
+        ->and($fake->tenantExists)->toBeTrue()
+        ->and($fake->associatedResources)->toContain(
+            'arn:aws:ses:eu-central-1:123:identity/example.com',
+            'arn:aws:ses:eu-central-1:123:configuration-set/mail-manager-tracking',
+        );
 });

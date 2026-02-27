@@ -13,6 +13,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
 use Topoff\MailManager\Console\CheckSesSendingCommand;
+use Topoff\MailManager\Console\SetupSesSnsAllCommand;
 use Topoff\MailManager\Console\SetupSesSnsTrackingCommand;
 use Topoff\MailManager\Console\SetupSesSendingCommand;
 use Topoff\MailManager\Console\TeardownSesSnsTrackingCommand;
@@ -38,6 +39,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
             ->name('laravel-mail-manager')
             ->hasConfigFile()
             ->hasViews()
+            ->hasCommand(SetupSesSnsAllCommand::class)
             ->hasCommand(SetupSesSnsTrackingCommand::class)
             ->hasCommand(CheckSesSnsTrackingCommand::class)
             ->hasCommand(SetupSesSendingCommand::class)

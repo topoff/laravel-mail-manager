@@ -24,6 +24,7 @@ class SesSnsSetupService
         $this->ensureTopicPolicy($topicArn, $accountId, $steps);
         $this->ensureHttpsSubscription($topicArn, $steps);
         $this->ensureConfigurationSet($steps);
+        $this->ensureTenantConfigurationSetAssociation($accountId, $steps);
         $this->ensureEventDestination($topicArn, $steps);
 
         $status = $this->check();
@@ -105,11 +106,30 @@ class SesSnsSetupService
             $this->addCheck($checks, 'ses_destination_exists', 'SES event destination exists', false, 'Configuration set missing.');
             $this->addCheck($checks, 'ses_destination_topic', 'SES destination points to SNS topic', false, 'Configuration set missing.');
             $this->addCheck($checks, 'ses_destination_enabled', 'SES destination is enabled', false, 'Configuration set missing.');
-            $this->addCheck($checks, 'ses_destination_events', 'SES destination has required event types', false, 'Configuration set missing.');
+                $this->addCheck($checks, 'ses_destination_events', 'SES destination has required event types', false, 'Configuration set missing.');
+        }
+
+        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $tenantName = $this->tenantName();
+        if ($tenantName !== null) {
+            $tenantExists = $this->api->tenantExists($tenantName);
+            $this->addCheck($checks, 'ses_tenant_exists', 'SES tenant exists', $tenantExists, $tenantName);
+
+            if ($tenantExists) {
+                $accountId = $this->accountId();
+                $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $configurationSet);
+                $configurationSetAssociated = $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn);
+                $this->addCheck(
+                    $checks,
+                    'ses_tenant_configuration_set_association',
+                    'SES tenant has configuration set association',
+                    $configurationSetAssociated,
+                    $configurationSetAssociated ? $configurationSetArn : 'Missing association for: '.$configurationSetArn
+                );
+            }
         }
 
         $ok = collect($checks)->every(fn (array $check): bool => $check['ok'] === true);
-        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
         $consoleRegion = $region !== '' ? $region : 'eu-central-1';
 
         return [
@@ -371,6 +391,43 @@ class SesSnsSetupService
         $eventTypes = (array) config('mail-manager.ses_sns.event_types', ['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
 
         return array_values(array_unique(array_map(static fn (mixed $type): string => strtoupper((string) $type), $eventTypes)));
+    }
+
+    protected function tenantName(): ?string
+    {
+        $value = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    /**
+     * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
+     */
+    protected function ensureTenantConfigurationSetAssociation(string $accountId, array &$steps): void
+    {
+        $tenantName = $this->tenantName();
+        if ($tenantName === null) {
+            $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Skipped (not configured).'];
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Skipped (tenant not configured).'];
+
+            return;
+        }
+
+        if (! $this->api->tenantExists($tenantName)) {
+            $this->api->createTenant($tenantName);
+            $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Created: '.$tenantName];
+        } else {
+            $steps[] = ['label' => 'SES tenant', 'ok' => true, 'details' => 'Already exists: '.$tenantName];
+        }
+
+        $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
+        $configurationSetArn = sprintf('arn:aws:ses:%s:%s:configuration-set/%s', $region, $accountId, $this->configurationSetName());
+        if (! $this->api->tenantHasResourceAssociation($tenantName, $configurationSetArn)) {
+            $this->api->associateTenantResource($tenantName, $configurationSetArn);
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Associated: '.$configurationSetArn];
+        } else {
+            $steps[] = ['label' => 'SES tenant configuration set association', 'ok' => true, 'details' => 'Already associated: '.$configurationSetArn];
+        }
     }
 
     /**

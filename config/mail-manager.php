@@ -168,6 +168,11 @@ return [
         // Event types bound to the SES event destination.
         'event_types' => ['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY'],
 
+        // Optional SES v2 tenant association for identity/configuration set resources.
+        'tenant' => [
+            'name' => null,
+        ],
+
         // Automation toggles.
         'create_topic_if_missing' => true,
         'create_https_subscription_if_missing' => true,

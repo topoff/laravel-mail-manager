@@ -25,6 +25,7 @@ class SesSnsNovaSiteController extends Controller
                 'sns_callback' => Route::has('mail-manager.tracking.sns') ? route('mail-manager.tracking.sns') : null,
             ],
             'commands' => [
+                'php artisan mail-manager:ses-sns:setup-all',
                 'php artisan mail-manager:ses-sns:setup-sending',
                 'php artisan mail-manager:ses-sns:check-sending',
                 'php artisan mail-manager:ses-sns:setup-tracking',
@@ -32,6 +33,11 @@ class SesSnsNovaSiteController extends Controller
                 'php artisan mail-manager:ses-sns:teardown --force',
             ],
             'command_buttons' => [
+                [
+                    'label' => 'Setup SES/SNS All',
+                    'description' => 'One-shot setup for SES sending, tracking, and tenant associations.',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'setup-all']),
+                ],
                 [
                     'label' => 'Setup SES Sending',
                     'description' => 'Create/check SES identity and expected DNS records.',
@@ -69,6 +75,7 @@ class SesSnsNovaSiteController extends Controller
                 'tracking_event_destination' => (string) config('mail-manager.ses_sns.event_destination', ''),
                 'tracking_topic_name' => (string) config('mail-manager.ses_sns.topic_name', ''),
                 'tracking_topic_arn' => (string) config('mail-manager.ses_sns.topic_arn', ''),
+                'tracking_tenant_name' => (string) config('mail-manager.ses_sns.tenant.name', ''),
                 'tracking_callback_endpoint' => (string) config('mail-manager.ses_sns.callback_endpoint', ''),
                 'tracking_event_types' => (array) config('mail-manager.ses_sns.event_types', []),
                 'mail_default_mailer' => (string) config('mail.default', ''),

@@ -122,6 +122,20 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
 
         public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void {}
 
+        public function tenantExists(string $tenantName): bool
+        {
+            return false;
+        }
+
+        public function createTenant(string $tenantName): void {}
+
+        public function tenantHasResourceAssociation(string $tenantName, string $resourceArn): bool
+        {
+            return false;
+        }
+
+        public function associateTenantResource(string $tenantName, string $resourceArn): void {}
+
         public function findHostedZoneIdByDomain(string $domain): ?string
         {
             return null;
