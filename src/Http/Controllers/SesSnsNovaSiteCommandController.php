@@ -100,17 +100,17 @@ class SesSnsNovaSiteCommandController extends Controller
             'test-delivery-db' => [
                 'label' => 'Test Delivery Event + DB Verify',
                 'command' => 'mail-manager:ses-sns:test-events',
-                'parameters' => ['--scenario' => ['delivery'], '--create-message-record' => true, '--wait' => 60, '--no-interaction' => true],
+                'parameters' => ['--scenario' => ['delivery'], '--create-message-record' => true, '--wait' => 180, '--poll-interval' => 3, '--no-interaction' => true],
             ],
             'test-bounce-db' => [
                 'label' => 'Test Bounce Event + DB Verify',
                 'command' => 'mail-manager:ses-sns:test-events',
-                'parameters' => ['--scenario' => ['bounce'], '--create-message-record' => true, '--wait' => 60, '--no-interaction' => true],
+                'parameters' => ['--scenario' => ['bounce'], '--create-message-record' => true, '--wait' => 180, '--poll-interval' => 3, '--no-interaction' => true],
             ],
             'test-complaint-db' => [
                 'label' => 'Test Complaint Event + DB Verify',
                 'command' => 'mail-manager:ses-sns:test-events',
-                'parameters' => ['--scenario' => ['complaint'], '--create-message-record' => true, '--wait' => 60, '--no-interaction' => true],
+                'parameters' => ['--scenario' => ['complaint'], '--create-message-record' => true, '--wait' => 180, '--poll-interval' => 3, '--no-interaction' => true],
             ],
             'teardown' => [
                 'label' => 'Teardown SES/SNS',

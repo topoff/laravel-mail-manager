@@ -33,9 +33,9 @@ class SesSnsNovaSiteController extends Controller
                 'php artisan mail-manager:ses-sns:test-events --scenario=delivery --wait=0',
                 'php artisan mail-manager:ses-sns:test-events --scenario=bounce --wait=0',
                 'php artisan mail-manager:ses-sns:test-events --scenario=complaint --wait=0',
-                'php artisan mail-manager:ses-sns:test-events --scenario=delivery --create-message-record --wait=60',
-                'php artisan mail-manager:ses-sns:test-events --scenario=bounce --create-message-record --wait=60',
-                'php artisan mail-manager:ses-sns:test-events --scenario=complaint --create-message-record --wait=60',
+                'php artisan mail-manager:ses-sns:test-events --scenario=delivery --create-message-record --wait=180 --poll-interval=3',
+                'php artisan mail-manager:ses-sns:test-events --scenario=bounce --create-message-record --wait=180 --poll-interval=3',
+                'php artisan mail-manager:ses-sns:test-events --scenario=complaint --create-message-record --wait=180 --poll-interval=3',
                 'php artisan mail-manager:ses-sns:teardown --force',
             ],
             'command_buttons' => [
