@@ -51,7 +51,7 @@ class SesSnsNovaSiteCommandController extends Controller
      * @return array<string, array{
      *     label: string,
      *     command: string,
-     *     parameters: array<string, bool>
+     *     parameters: array<string, mixed>
      * }>
      */
     protected function commands(): array
@@ -81,6 +81,36 @@ class SesSnsNovaSiteCommandController extends Controller
                 'label' => 'Check SES/SNS Tracking',
                 'command' => 'mail-manager:ses-sns:check-tracking',
                 'parameters' => ['--no-interaction' => true],
+            ],
+            'test-delivery' => [
+                'label' => 'Test Delivery Event',
+                'command' => 'mail-manager:ses-sns:test-events',
+                'parameters' => ['--scenario' => ['delivery'], '--wait' => 0, '--no-interaction' => true],
+            ],
+            'test-bounce' => [
+                'label' => 'Test Bounce Event',
+                'command' => 'mail-manager:ses-sns:test-events',
+                'parameters' => ['--scenario' => ['bounce'], '--wait' => 0, '--no-interaction' => true],
+            ],
+            'test-complaint' => [
+                'label' => 'Test Complaint Event',
+                'command' => 'mail-manager:ses-sns:test-events',
+                'parameters' => ['--scenario' => ['complaint'], '--wait' => 0, '--no-interaction' => true],
+            ],
+            'test-delivery-db' => [
+                'label' => 'Test Delivery Event + DB Verify',
+                'command' => 'mail-manager:ses-sns:test-events',
+                'parameters' => ['--scenario' => ['delivery'], '--create-message-record' => true, '--wait' => 60, '--no-interaction' => true],
+            ],
+            'test-bounce-db' => [
+                'label' => 'Test Bounce Event + DB Verify',
+                'command' => 'mail-manager:ses-sns:test-events',
+                'parameters' => ['--scenario' => ['bounce'], '--create-message-record' => true, '--wait' => 60, '--no-interaction' => true],
+            ],
+            'test-complaint-db' => [
+                'label' => 'Test Complaint Event + DB Verify',
+                'command' => 'mail-manager:ses-sns:test-events',
+                'parameters' => ['--scenario' => ['complaint'], '--create-message-record' => true, '--wait' => 60, '--no-interaction' => true],
             ],
             'teardown' => [
                 'label' => 'Teardown SES/SNS',

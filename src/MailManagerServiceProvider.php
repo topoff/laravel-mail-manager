@@ -11,12 +11,13 @@ use Illuminate\Support\Facades\Event;
 use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
 use Topoff\MailManager\Console\CheckSesSendingCommand;
+use Topoff\MailManager\Console\CheckSesSnsTrackingCommand;
+use Topoff\MailManager\Console\SetupSesSendingCommand;
 use Topoff\MailManager\Console\SetupSesSnsAllCommand;
 use Topoff\MailManager\Console\SetupSesSnsTrackingCommand;
-use Topoff\MailManager\Console\SetupSesSendingCommand;
 use Topoff\MailManager\Console\TeardownSesSnsTrackingCommand;
+use Topoff\MailManager\Console\TestSesSnsEventsCommand;
 use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 use Topoff\MailManager\Jobs\CleanupMailManagerTablesJob;
 use Topoff\MailManager\Listeners\AddBccToEmailsListener;
@@ -44,6 +45,7 @@ class MailManagerServiceProvider extends PackageServiceProvider
             ->hasCommand(CheckSesSnsTrackingCommand::class)
             ->hasCommand(SetupSesSendingCommand::class)
             ->hasCommand(CheckSesSendingCommand::class)
+            ->hasCommand(TestSesSnsEventsCommand::class)
             ->hasCommand(TeardownSesSnsTrackingCommand::class)
             ->discoversMigrations();
     }

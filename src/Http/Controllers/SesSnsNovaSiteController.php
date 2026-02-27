@@ -30,6 +30,12 @@ class SesSnsNovaSiteController extends Controller
                 'php artisan mail-manager:ses-sns:check-sending',
                 'php artisan mail-manager:ses-sns:setup-tracking',
                 'php artisan mail-manager:ses-sns:check-tracking',
+                'php artisan mail-manager:ses-sns:test-events --scenario=delivery --wait=0',
+                'php artisan mail-manager:ses-sns:test-events --scenario=bounce --wait=0',
+                'php artisan mail-manager:ses-sns:test-events --scenario=complaint --wait=0',
+                'php artisan mail-manager:ses-sns:test-events --scenario=delivery --create-message-record --wait=60',
+                'php artisan mail-manager:ses-sns:test-events --scenario=bounce --create-message-record --wait=60',
+                'php artisan mail-manager:ses-sns:test-events --scenario=complaint --create-message-record --wait=60',
                 'php artisan mail-manager:ses-sns:teardown --force',
             ],
             'command_buttons' => [
@@ -57,6 +63,36 @@ class SesSnsNovaSiteController extends Controller
                     'label' => 'Check SES/SNS Tracking',
                     'description' => 'Validate current SES/SNS tracking setup status.',
                     'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'check-tracking']),
+                ],
+                [
+                    'label' => 'Test Delivery Event',
+                    'description' => 'Send SES simulator delivery event (success@simulator.amazonses.com).',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-delivery']),
+                ],
+                [
+                    'label' => 'Test Bounce Event',
+                    'description' => 'Send SES simulator bounce event (bounce@simulator.amazonses.com).',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-bounce']),
+                ],
+                [
+                    'label' => 'Test Complaint Event',
+                    'description' => 'Send SES simulator complaint event (complaint@simulator.amazonses.com).',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-complaint']),
+                ],
+                [
+                    'label' => 'Test Delivery Event + DB Verify',
+                    'description' => 'Send delivery simulator event and verify tracking_meta updates in messages table.',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-delivery-db']),
+                ],
+                [
+                    'label' => 'Test Bounce Event + DB Verify',
+                    'description' => 'Send bounce simulator event and verify tracking_meta updates in messages table.',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-bounce-db']),
+                ],
+                [
+                    'label' => 'Test Complaint Event + DB Verify',
+                    'description' => 'Send complaint simulator event and verify tracking_meta updates in messages table.',
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-complaint-db']),
                 ],
                 [
                     'label' => 'Teardown SES/SNS',
