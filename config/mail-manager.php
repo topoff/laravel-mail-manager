@@ -195,6 +195,9 @@ return [
             'mail_from_behavior_on_mx_failure' => 'USE_DEFAULT_VALUE',
 
             // Route53 DNS automation for SES records.
+            // Route53 is AWS DNS. Enable only if your domain DNS is hosted in AWS Route53.
+            // If DNS is managed elsewhere (e.g. Cloudflare, provider panel), keep disabled
+            // and create SES verification/DKIM/MX records manually at your DNS provider.
             'route53' => [
                 'enabled' => false,
                 'hosted_zone_id' => null, // Optional: if null, lookup by identity domain.
