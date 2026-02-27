@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\Queue;
+
 it('records delivery notifications via sns callback', function () {
     $message = createMessage([
         'tracking_message_id' => 'delivery-mid-1',
@@ -83,4 +85,40 @@ it('records complaint notifications via sns callback', function () {
 
     expect(data_get($message->tracking_meta, 'complaint'))->toBeTrue()
         ->and(data_get($message->tracking_meta, 'complaint_type'))->toBe('abuse');
+});
+
+it('processes mail-manager test notifications synchronously', function () {
+    Queue::fake();
+
+    $message = createMessage([
+        'tracking_message_id' => 'delivery-mid-sync',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Delivery',
+            'mail' => [
+                'messageId' => 'delivery-mid-sync',
+                'tags' => [
+                    ['name' => 'mail_manager_test', 'value' => 'true'],
+                ],
+            ],
+            'delivery' => [
+                'smtpResponse' => '250 Ok',
+                'timestamp' => '2026-01-01T00:00:00Z',
+                'recipients' => ['receiver@example.com'],
+            ],
+        ]),
+    ];
+
+    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+
+    $message->refresh();
+
+    expect(data_get($message->tracking_meta, 'success'))->toBeTrue()
+        ->and(data_get($message->tracking_meta, 'smtpResponse'))->toBe('250 Ok');
+
+    Queue::assertNothingPushed();
 });

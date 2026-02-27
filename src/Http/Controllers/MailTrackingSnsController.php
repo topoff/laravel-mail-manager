@@ -39,13 +39,68 @@ class MailTrackingSnsController extends Controller
         }
 
         $notificationType = $message['notificationType'] ?? null;
+        $processSynchronously = $this->isMailManagerTestNotification($message);
+
         match ($notificationType) {
-            'Delivery' => RecordDeliveryJob::dispatch($message)->onQueue(config('mail-manager.tracking.tracker_queue')),
-            'Bounce' => RecordBounceJob::dispatch($message)->onQueue(config('mail-manager.tracking.tracker_queue')),
-            'Complaint' => RecordComplaintJob::dispatch($message)->onQueue(config('mail-manager.tracking.tracker_queue')),
+            'Delivery' => $this->dispatchTrackingJob(RecordDeliveryJob::class, $message, $processSynchronously),
+            'Bounce' => $this->dispatchTrackingJob(RecordBounceJob::class, $message, $processSynchronously),
+            'Complaint' => $this->dispatchTrackingJob(RecordComplaintJob::class, $message, $processSynchronously),
             default => null,
         };
 
         return 'notification processed';
+    }
+
+    /**
+     * @param  class-string  $jobClass
+     * @param  array<string, mixed>  $message
+     */
+    protected function dispatchTrackingJob(string $jobClass, array $message, bool $processSynchronously): void
+    {
+        if ($processSynchronously) {
+            (new $jobClass($message))->handle();
+
+            return;
+        }
+
+        $jobClass::dispatch($message)->onQueue(config('mail-manager.tracking.tracker_queue'));
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     */
+    protected function isMailManagerTestNotification(array $message): bool
+    {
+        $mailManagerTestTag = $this->extractMailTagValue($message, 'mail_manager_test');
+        if ($mailManagerTestTag !== null) {
+            return in_array(strtolower($mailManagerTestTag), ['1', 'true', 'yes'], true);
+        }
+
+        $subject = (string) data_get($message, 'mail.commonHeaders.subject', '');
+
+        return str_starts_with($subject, '[mail-manager][');
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     */
+    protected function extractMailTagValue(array $message, string $tagName): ?string
+    {
+        foreach ((array) data_get($message, 'mail.tags', []) as $tag) {
+            if (! is_array($tag)) {
+                continue;
+            }
+
+            $name = (string) ($tag['name'] ?? $tag['Name'] ?? $tag['key'] ?? $tag['Key'] ?? '');
+            if (strtolower($name) !== strtolower($tagName)) {
+                continue;
+            }
+
+            $value = (string) ($tag['value'] ?? $tag['Value'] ?? '');
+
+            return $value !== '' ? $value : null;
+        }
+
+        return null;
     }
 }
