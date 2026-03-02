@@ -118,9 +118,9 @@ class SendMessageJob implements ShouldQueue
      */
     protected function callMailHandlerWithSingleMessage(Message $message): void
     {
-        $handlerClass = $message->messageType?->single_mail_handler;
+        $handlerClass = $message->messageType->single_mail_handler;
 
-        if (! $handlerClass || ! is_string($handlerClass) || ! class_exists($handlerClass)) {
+        if (! $handlerClass || ! class_exists($handlerClass)) {
             Log::error('SendMessageJob: Invalid or missing single_mail_handler for message.', [
                 'message_id' => $message->id,
                 'message_type_id' => $message->message_type_id,

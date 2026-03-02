@@ -5,6 +5,7 @@ namespace Topoff\MailManager\Console;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Topoff\MailManager\Mail\SesTestMail;
 use Topoff\MailManager\Services\SesSns\SesEventSimulatorService;
 
 class TestSesSnsEventsCommand extends Command
@@ -214,7 +215,7 @@ class TestSesSnsEventsCommand extends Command
 
         /** @var Model $messageType */
         $messageType = $messageTypeModelClass::query()->firstOrCreate(
-            ['mail_class' => 'Topoff\\MailManager\\Mail\\SesTestMail'],
+            ['mail_class' => SesTestMail::class],
             [
                 'single_mail_handler' => null,
                 'bulk_mail_handler' => null,

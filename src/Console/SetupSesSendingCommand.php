@@ -3,8 +3,8 @@
 namespace Topoff\MailManager\Console;
 
 use Illuminate\Console\Command;
-use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
 use Throwable;
+use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
 
 class SetupSesSendingCommand extends Command
 {
@@ -40,4 +40,3 @@ class SetupSesSendingCommand extends Command
         }
     }
 }
-

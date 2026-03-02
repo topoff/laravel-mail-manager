@@ -32,11 +32,9 @@ it('records delivery notifications via sns callback', function () {
     expect(data_get($message->tracking_meta, 'success'))->toBeTrue()
         ->and(data_get($message->tracking_meta, 'smtpResponse'))->toBe('250 Ok');
 
-    Event::assertDispatched(SesSnsWebhookReceivedEvent::class, function (SesSnsWebhookReceivedEvent $event): bool {
-        return $event->notificationType === 'Delivery'
-            && $event->processedSynchronously === false
-            && data_get($event->sesMessage, 'mail.messageId') === 'delivery-mid-1';
-    });
+    Event::assertDispatched(SesSnsWebhookReceivedEvent::class, fn (SesSnsWebhookReceivedEvent $event): bool => $event->notificationType === 'Delivery'
+        && $event->processedSynchronously === false
+        && data_get($event->sesMessage, 'mail.messageId') === 'delivery-mid-1');
 });
 
 it('records bounce notifications via sns callback', function () {

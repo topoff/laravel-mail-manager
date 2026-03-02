@@ -251,7 +251,7 @@ it('checks if MAIL_FROM_ADDRESS matches ses identity', function () {
 
         public function disassociateTenantResource(string $tenantName, string $resourceArn): void {}
 
-        public function getEmailIdentity(string $identity): ?array
+        public function getEmailIdentity(string $identity): array
         {
             return ['VerifiedForSendingStatus' => true];
         }

@@ -111,9 +111,9 @@ class Message extends Resource
     public function filters(NovaRequest $request): array
     {
         return [
-            new DateFilter("created_at", 'today'),
-            new DateFilter("sent_at", null),
-            new DateFilter("error_at", null),
+            new DateFilter('created_at', 'today'),
+            new DateFilter('sent_at', null),
+            new DateFilter('error_at', null),
             new MessagesStatusFilter,
             new MessagesReceiverTypeFilter,
             new MessagesMessageTypeFilter,

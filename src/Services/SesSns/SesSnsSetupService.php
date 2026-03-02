@@ -26,8 +26,8 @@ class SesSnsSetupService
         $this->ensureHttpsSubscription($topicArn, $steps);
 
         foreach ($configurationSets as $key => $set) {
-            $configSetName = (string) ($set['configuration_set'] ?? '');
-            $eventDestName = (string) ($set['event_destination'] ?? '');
+            $configSetName = $set['configuration_set'];
+            $eventDestName = $set['event_destination'];
             $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
 
             $this->ensureConfigurationSet($configSetName, $suffix, $steps);
@@ -82,8 +82,8 @@ class SesSnsSetupService
         }
 
         foreach ($configurationSets as $key => $set) {
-            $configSetName = (string) ($set['configuration_set'] ?? '');
-            $eventDestName = (string) ($set['event_destination'] ?? '');
+            $configSetName = $set['configuration_set'];
+            $eventDestName = $set['event_destination'];
             $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
             $keySuffix = count($configurationSets) > 1 ? "_{$key}" : '';
 
@@ -98,7 +98,7 @@ class SesSnsSetupService
                 if ($destinationExists) {
                     $destinationTopicArn = (string) Arr::get($eventDestination, 'SnsDestination.TopicArn', '');
                     $enabled = (bool) Arr::get($eventDestination, 'Enabled', false);
-                    $configuredEventTypes = array_map('strtoupper', (array) Arr::get($eventDestination, 'MatchingEventTypes', []));
+                    $configuredEventTypes = array_map(strtoupper(...), (array) Arr::get($eventDestination, 'MatchingEventTypes', []));
                     $missingEventTypes = array_values(array_diff($eventTypes, $configuredEventTypes));
 
                     $this->addCheck($checks, 'ses_destination_topic'.$keySuffix, 'SES destination points to SNS topic'.$suffix, $topicArn !== '' && $destinationTopicArn === $topicArn, $destinationTopicArn);
@@ -133,7 +133,7 @@ class SesSnsSetupService
                 $accountId = $this->accountId();
 
                 foreach ($configurationSets as $key => $set) {
-                    $configSetName = (string) ($set['configuration_set'] ?? '');
+                    $configSetName = $set['configuration_set'];
                     $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
                     $keySuffix = count($configurationSets) > 1 ? "_{$key}" : '';
 
@@ -150,7 +150,7 @@ class SesSnsSetupService
             }
         }
 
-        $ok = collect($checks)->every(fn (array $check): bool => $check['ok'] === true);
+        $ok = collect($checks)->every(fn (array $check): bool => $check['ok']);
         $consoleRegion = $region !== '' ? $region : 'eu-central-1';
 
         return [
@@ -184,7 +184,7 @@ class SesSnsSetupService
 
         if ($topicArn !== '' && $endpoint !== '') {
             $subscriptionArn = $this->api->findHttpsSubscriptionArn($topicArn, $endpoint);
-            if ($subscriptionArn !== null && $subscriptionArn !== '' && $subscriptionArn !== 'PendingConfirmation') {
+            if (! in_array($subscriptionArn, [null, '', 'PendingConfirmation'], true)) {
                 $this->api->unsubscribe($subscriptionArn);
                 $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Removed: '.$subscriptionArn];
             } else {
@@ -196,8 +196,8 @@ class SesSnsSetupService
 
         try {
             foreach ($configurationSets as $key => $set) {
-                $configSetName = (string) ($set['configuration_set'] ?? '');
-                $eventDestName = (string) ($set['event_destination'] ?? '');
+                $configSetName = $set['configuration_set'];
+                $eventDestName = $set['event_destination'];
                 $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
 
                 if ($this->api->configurationSetExists($configSetName)) {
@@ -219,7 +219,7 @@ class SesSnsSetupService
                 }
             }
         } catch (Throwable $e) {
-            throw new RuntimeException('Failed to remove SES resources: '.$e->getMessage(), previous: $e);
+            throw new RuntimeException('Failed to remove SES resources: '.$e->getMessage(), $e->getCode(), previous: $e);
         }
 
         if ($topicArn !== '') {
@@ -227,7 +227,7 @@ class SesSnsSetupService
                 $this->api->deleteTopic($topicArn);
                 $steps[] = ['label' => 'SNS topic', 'ok' => true, 'details' => 'Removed: '.$topicArn];
             } catch (Throwable $e) {
-                throw new RuntimeException('Failed to remove SNS topic: '.$e->getMessage(), previous: $e);
+                throw new RuntimeException('Failed to remove SNS topic: '.$e->getMessage(), $e->getCode(), previous: $e);
             }
         } else {
             $steps[] = ['label' => 'SNS topic', 'ok' => true, 'details' => 'Nothing to remove.'];
@@ -335,10 +335,7 @@ class SesSnsSetupService
         try {
             $this->api->subscribeHttps($topicArn, $endpoint);
         } catch (Throwable $e) {
-            throw new RuntimeException(
-                'SNS could not subscribe endpoint "'.$endpoint.'". AWS requires a publicly reachable HTTPS endpoint. Original error: '.$e->getMessage(),
-                previous: $e
-            );
+            throw new RuntimeException('SNS could not subscribe endpoint "'.$endpoint.'". AWS requires a publicly reachable HTTPS endpoint. Original error: '.$e->getMessage(), $e->getCode(), previous: $e);
         }
 
         $steps[] = ['label' => 'SNS HTTPS subscription', 'ok' => true, 'details' => 'Subscription requested: '.$endpoint];
@@ -602,10 +599,6 @@ class SesSnsSetupService
             return false;
         }
 
-        if (str_ends_with($host, '.test') || str_ends_with($host, '.local') || str_ends_with($host, '.localhost')) {
-            return false;
-        }
-
-        return true;
+        return ! (str_ends_with($host, '.test') || str_ends_with($host, '.local') || str_ends_with($host, '.localhost'));
     }
 }

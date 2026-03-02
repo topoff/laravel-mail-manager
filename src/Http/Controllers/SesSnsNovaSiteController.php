@@ -147,10 +147,10 @@ class SesSnsNovaSiteController extends Controller
 
             return [
                 'enabled' => true,
-                'ok' => (bool) ($status['ok'] ?? false),
+                'ok' => $status['ok'],
                 'error' => null,
-                'checks' => (array) ($status['checks'] ?? []),
-                'dns_records' => (array) ($status['dns_records'] ?? []),
+                'checks' => $status['checks'],
+                'dns_records' => $status['dns_records'],
             ];
         } catch (Throwable $e) {
             return [
@@ -181,11 +181,11 @@ class SesSnsNovaSiteController extends Controller
 
             return [
                 'enabled' => true,
-                'ok' => (bool) ($status['ok'] ?? false),
+                'ok' => $status['ok'],
                 'error' => null,
-                'configuration' => (array) ($status['configuration'] ?? []),
-                'checks' => (array) ($status['checks'] ?? []),
-                'aws_console' => (array) ($status['aws_console'] ?? []),
+                'configuration' => $status['configuration'],
+                'checks' => $status['checks'],
+                'aws_console' => $status['aws_console'],
             ];
         } catch (Throwable $e) {
             return [

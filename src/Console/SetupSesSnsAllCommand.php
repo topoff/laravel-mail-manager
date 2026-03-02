@@ -20,19 +20,19 @@ class SetupSesSnsAllCommand extends Command
             $trackingResult = $trackingService->setup();
 
             $this->info('Sending setup');
-            foreach ((array) ($sendingResult['steps'] ?? []) as $step) {
-                $icon = (bool) ($step['ok'] ?? false) ? 'OK' : 'FAIL';
-                $this->line(sprintf('[%s] %s - %s', $icon, (string) ($step['label'] ?? ''), (string) ($step['details'] ?? '')));
+            foreach ($sendingResult['steps'] as $step) {
+                $icon = $step['ok'] ? 'OK' : 'FAIL';
+                $this->line(sprintf('[%s] %s - %s', $icon, $step['label'], $step['details']));
             }
 
             $this->line('');
             $this->info('Tracking setup');
-            foreach ((array) ($trackingResult['steps'] ?? []) as $step) {
-                $icon = (bool) ($step['ok'] ?? false) ? 'OK' : 'FAIL';
-                $this->line(sprintf('[%s] %s - %s', $icon, (string) ($step['label'] ?? ''), (string) ($step['details'] ?? '')));
+            foreach ($trackingResult['steps'] as $step) {
+                $icon = $step['ok'] ? 'OK' : 'FAIL';
+                $this->line(sprintf('[%s] %s - %s', $icon, $step['label'], $step['details']));
             }
 
-            $ok = (bool) ($sendingResult['ok'] ?? false) && (bool) ($trackingResult['ok'] ?? false);
+            $ok = $sendingResult['ok'] && $trackingResult['ok'];
             if (! $ok) {
                 $this->warn('Setup completed, but one or more checks are not fully green.');
 
@@ -49,4 +49,3 @@ class SetupSesSnsAllCommand extends Command
         }
     }
 }
-

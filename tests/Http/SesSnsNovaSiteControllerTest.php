@@ -38,7 +38,7 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
             return '123456789012';
         }
 
-        public function findTopicArnByName(string $topicName): ?string
+        public function findTopicArnByName(string $topicName): string
         {
             return 'arn:aws:sns:eu-central-1:123456789012:mail-manager-events';
         }
@@ -70,7 +70,7 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
             return true;
         }
 
-        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): ?string
+        public function findHttpsSubscriptionArn(string $topicArn, string $endpoint): string
         {
             return 'arn:aws:sns:eu-central-1:123456789012:sub/example';
         }
@@ -88,7 +88,7 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
 
         public function createConfigurationSet(string $configurationSetName): void {}
 
-        public function getEventDestination(string $configurationSetName, string $eventDestinationName): ?array
+        public function getEventDestination(string $configurationSetName, string $eventDestinationName): array
         {
             return [
                 'Name' => $eventDestinationName,
@@ -104,7 +104,7 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
 
         public function deleteConfigurationSet(string $configurationSetName): void {}
 
-        public function getEmailIdentity(string $identity): ?array
+        public function getEmailIdentity(string $identity): array
         {
             return [
                 'VerifiedForSendingStatus' => true,

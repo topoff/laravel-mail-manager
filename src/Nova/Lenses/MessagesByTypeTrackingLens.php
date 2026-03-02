@@ -24,7 +24,7 @@ class MessagesByTypeTrackingLens extends Lens
         $query = $query->from($messageTable)->select([
             "{$messageTable}.message_type_id",
             DB::raw("{$messageTypeTable}.mail_class"),
-            DB::raw("COUNT(*) as total_messages"),
+            DB::raw('COUNT(*) as total_messages'),
             DB::raw("COUNT(CASE WHEN {$messageTable}.sent_at IS NOT NULL THEN 1 END) as total_sent"),
             DB::raw("SUM({$messageTable}.tracking_opens) as total_opens"),
             DB::raw("SUM({$messageTable}.tracking_clicks) as total_clicks"),
@@ -38,7 +38,7 @@ class MessagesByTypeTrackingLens extends Lens
 
         return $request->withOrdering(
             $request->withFilters($query),
-            fn(Builder $query): Builder => $query->orderBy('total_messages', 'desc'),
+            fn (Builder $query): Builder => $query->orderBy('total_messages', 'desc'),
         );
     }
 

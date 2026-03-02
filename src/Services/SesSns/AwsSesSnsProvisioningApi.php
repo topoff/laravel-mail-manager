@@ -253,7 +253,7 @@ class AwsSesSnsProvisioningApi implements SesSnsProvisioningApi
 
         do {
             $params = ['TenantName' => $tenantName];
-            if ($nextToken !== null && $nextToken !== '') {
+            if ($nextToken !== null) {
                 $params['NextToken'] = $nextToken;
             }
 

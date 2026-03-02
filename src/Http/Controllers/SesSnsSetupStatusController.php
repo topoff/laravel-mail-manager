@@ -14,4 +14,3 @@ class SesSnsSetupStatusController extends Controller
         ]);
     }
 }
-

@@ -50,7 +50,7 @@ class SesSendingSetupService
 
         $defaultConfigSet = null;
         foreach ($configurationSets as $key => $set) {
-            $configSetName = (string) ($set['configuration_set'] ?? '');
+            $configSetName = $set['configuration_set'];
             $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
 
             if ($configSetName === '') {
@@ -174,7 +174,7 @@ class SesSendingSetupService
                 );
 
                 foreach ($configurationSets as $key => $set) {
-                    $configSetName = (string) ($set['configuration_set'] ?? '');
+                    $configSetName = $set['configuration_set'];
                     $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
                     $keySuffix = count($configurationSets) > 1 ? "_{$key}" : '';
 
@@ -193,7 +193,7 @@ class SesSendingSetupService
             }
         }
 
-        $ok = collect($checks)->every(fn (array $check): bool => $check['ok'] === true);
+        $ok = collect($checks)->every(fn (array $check): bool => $check['ok']);
 
         return [
             'ok' => $ok,
@@ -319,7 +319,7 @@ class SesSendingSetupService
     protected function identityDomainFromIdentity(string $identity): string
     {
         if (str_contains($identity, '@')) {
-            return (string) substr(strrchr($identity, '@') ?: '', 1);
+            return substr(strrchr($identity, '@') ?: '', 1);
         }
 
         return $identity;
@@ -335,7 +335,7 @@ class SesSendingSetupService
             return false;
         }
 
-        $mailFromAddressDomain = (string) substr(strrchr($mailFromAddress, '@') ?: '', 1);
+        $mailFromAddressDomain = substr(strrchr($mailFromAddress, '@') ?: '', 1);
 
         return strtolower($mailFromAddressDomain) === strtolower($identity);
     }
@@ -391,7 +391,7 @@ class SesSendingSetupService
         }
 
         foreach ($configurationSets as $key => $set) {
-            $configSetName = (string) ($set['configuration_set'] ?? '');
+            $configSetName = $set['configuration_set'];
             $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
 
             if ($configSetName === '') {

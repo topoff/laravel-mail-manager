@@ -3,8 +3,8 @@
 namespace Topoff\MailManager\Console;
 
 use Illuminate\Console\Command;
-use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
 use Throwable;
+use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
 
 class TeardownSesSnsTrackingCommand extends Command
 {
@@ -41,4 +41,3 @@ class TeardownSesSnsTrackingCommand extends Command
         }
     }
 }
-

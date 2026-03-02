@@ -53,3 +53,21 @@ parameters:
 			identifier: return.phpDocType
 			count: 1
 			path: src/Models/Message.php
+
+		-
+			message: '#^Method Topoff\\MailManager\\Notifications\\NovaChannelNotification\:\:toVonage\(\) has invalid return type Illuminate\\Notifications\\Messages\\VonageMessage\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Notifications/NovaChannelNotification.php
+
+		-
+			message: '#^Call to method content\(\) on an unknown class Illuminate\\Notifications\\Messages\\VonageMessage\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Notifications/NovaChannelNotification.php
+
+		-
+			message: '#^Instantiated class Illuminate\\Notifications\\Messages\\VonageMessage not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Notifications/NovaChannelNotification.php
