@@ -45,27 +45,34 @@ class MainBulkMailHandler
         /** @var array<int|string, MainMailHandler> $handlers */
         $handlers = [];
 
+        $this->setMessagesToReserved();
+
+        foreach ($this->messageGroup as $message) {
+            /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
+            $mailHandler = app($message->messageType->single_mail_handler, ['message' => $message]);
+            $this->throwExceptionOnMissingInterface($mailHandler);
+            $handlers[$message->getKey()] = $mailHandler;
+        }
+
         try {
-            $this->setMessagesToReserved();
-
-            foreach ($this->messageGroup as $message) {
-                /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
-                $mailHandler = (new $message->messageType->single_mail_handler($message));
-                $this->throwExceptionOnMissingInterface($mailHandler);
-                $handlers[$message->getKey()] = $mailHandler;
-            }
-
             $mailClass = $this->mailClass();
             Mail::to($this->receiver->getEmail())->send(new $mailClass(...$this->getMailParameters()));
-            $this->setMessagesToSent();
         } catch (Throwable $t) {
             $this->setMessagesToError();
-            Log::error('Messages could not be sent', [
+
+            throw $t;
+        }
+
+        try {
+            $this->setMessagesToSent();
+        } catch (Throwable $t) {
+            Log::critical('Mail was sent but messages could not be marked as sent', [
                 'receiver' => $this->receiver->getEmail(),
+                'message_ids' => $this->messageGroup->pluck('id')->all(),
                 'exception' => $t,
             ]);
 
-            return;
+            throw $t;
         }
 
         foreach ($handlers as $key => $handler) {

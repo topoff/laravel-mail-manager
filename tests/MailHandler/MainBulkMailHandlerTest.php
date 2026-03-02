@@ -94,8 +94,7 @@ it('marks all messages as sent on success', function () {
     });
 });
 
-it('marks all messages as error when sending fails', function () {
-    // Don't fake Mail — let it fail naturally since there's no mail transport
+it('marks all messages as error and rethrows when sending fails', function () {
     Mail::shouldReceive('to->send')->andThrow(new \RuntimeException('SMTP failure'));
 
     $messages = collect([
@@ -116,13 +115,36 @@ it('marks all messages as error when sending fails', function () {
     ])->each(fn (Message $m) => $m->load('messageType'));
 
     $handler = new MainBulkMailHandler($this->receiver, $messages);
-    $handler->send();
+
+    try {
+        $handler->send();
+    } catch (\RuntimeException) {
+        // Expected
+    }
 
     $messages->each(function (Message $m) {
         $m->refresh();
         expect($m->error_at)->not->toBeNull()
             ->and($m->reserved_at)->toBeNull();
     });
+});
+
+it('rethrows the exception when sending fails', function () {
+    Mail::shouldReceive('to->send')->andThrow(new \RuntimeException('SMTP failure'));
+
+    $messages = collect([
+        createMessage([
+            'receiver_type' => TestReceiver::class,
+            'receiver_id' => $this->receiver->id,
+            'message_type_id' => $this->messageType->id,
+            'messagable_type' => TestMessagable::class,
+            'messagable_id' => $this->messagable->id,
+        ]),
+    ])->each(fn (Message $m) => $m->load('messageType'));
+
+    $handler = new MainBulkMailHandler($this->receiver, $messages);
+
+    expect(fn () => $handler->send())->toThrow(\RuntimeException::class, 'SMTP failure');
 });
 
 it('uses the configured bulk mail class', function () {
