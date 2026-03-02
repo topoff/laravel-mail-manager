@@ -57,7 +57,6 @@ class TestCase extends Orchestra
                 $table->string('single_mail_handler', 120)->nullable();
                 $table->string('bulk_mail_handler', 120)->nullable();
                 $table->boolean('direct')->default(false);
-                $table->boolean('customer')->default(true);
                 $table->boolean('dev_bcc')->default(true);
                 $table->unsignedMediumInteger('error_stop_send_minutes')->default(60 * 24 * 3);
                 $table->boolean('required_sender')->default(false)->index();
@@ -88,6 +87,7 @@ class TestCase extends Orchestra
                 $table->unsignedBigInteger('messagable_id')->nullable();
                 $table->json('params')->nullable();
                 $table->text('text')->nullable();
+                $table->string('locale', 5)->nullable()->index();
                 $table->dateTime('scheduled_at')->nullable();
                 $table->dateTime('reserved_at')->nullable()->index();
                 $table->dateTime('error_at')->nullable()->index();

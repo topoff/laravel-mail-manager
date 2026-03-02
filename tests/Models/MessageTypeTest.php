@@ -46,26 +46,6 @@ it('scopes direct message types', function () {
         ->and($directTypes->first()->mail_class)->toBe('Direct\\Mail');
 });
 
-it('scopes customer message types', function () {
-    createMessageType(['mail_class' => 'Customer\\Mail', 'customer' => true]);
-    createMessageType(['mail_class' => 'Company\\Mail', 'customer' => false]);
-
-    $customerTypes = MessageType::customer()->get();
-
-    expect($customerTypes)->toHaveCount(1)
-        ->and($customerTypes->first()->mail_class)->toBe('Customer\\Mail');
-});
-
-it('scopes company message types', function () {
-    createMessageType(['mail_class' => 'Customer\\Mail', 'customer' => true]);
-    createMessageType(['mail_class' => 'Company\\Mail', 'customer' => false]);
-
-    $companyTypes = MessageType::company()->get();
-
-    expect($companyTypes)->toHaveCount(1)
-        ->and($companyTypes->first()->mail_class)->toBe('Company\\Mail');
-});
-
 it('supports soft deletes', function () {
     $messageType = createMessageType();
     $id = $messageType->id;
