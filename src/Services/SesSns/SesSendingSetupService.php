@@ -25,6 +25,7 @@ class SesSendingSetupService
             $identity = $this->resolveIdentity($identityConfig);
             $suffix = count($identities) > 1 ? " [{$identityKey}]" : '';
             $identityData = $this->api->getEmailIdentity($identity);
+            $identityDnsRecords = [];
 
             if ($identityData === null) {
                 $identityData = $this->api->createEmailIdentity($identity);
@@ -35,6 +36,7 @@ class SesSendingSetupService
             }
 
             foreach ($this->buildDnsRecords($identity, $identityData) as $record) {
+                $identityDnsRecords[] = $record;
                 $dnsRecords[] = $record;
             }
 
@@ -48,13 +50,14 @@ class SesSendingSetupService
                 $steps[] = ['label' => 'SES custom MAIL FROM'.$suffix, 'ok' => true, 'details' => 'Configured: '.$mailFromDomain];
 
                 foreach ($this->buildMailFromDnsRecords($mailFromDomain) as $record) {
+                    $identityDnsRecords[] = $record;
                     $dnsRecords[] = $record;
                 }
             } else {
                 $steps[] = ['label' => 'SES custom MAIL FROM'.$suffix, 'ok' => true, 'details' => 'Skipped (not configured).'];
             }
 
-            $this->upsertDnsIfConfigured($identity, $dnsRecords, $steps);
+            $this->upsertDnsIfConfigured($identity, $identityDnsRecords, $steps);
 
             $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
             $steps[] = [

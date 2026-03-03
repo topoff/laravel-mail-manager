@@ -102,28 +102,6 @@ class MainMailHandler implements GroupableMailTypeInterface
     {
         // OPTIONAL in child classes: Overwrite if you want to do something else when the sending failed
 
-        // 450: domain not found error, 550: unroutable address
-        if ($this->message->attempts >= 2 && ($this->message->email_error_code === 450 || $this->message->email_error_code === 550)) {
-            $this->receiver->setEmailToInvalid(false);
-
-            Log::warning(static::class.':'.__FUNCTION__.': Messages to Receiver '.$this->receiver->getEmail().'('.$this->receiver::class.') could not be sent. Receiver now set email_invalid_at. : message_id: '
-                .$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '.$t->getMessage().' on line '.$t->getLine());
-
-            return true;
-        }
-        if ($this->message->email_error_code === 451 && Str::contains($this->message->email_error, '451 this account is temporarily disabled')) {
-            $this->message->scheduled_at = Date::now()->addMinutes($this->message->attempts * 60); // increase wait time exponentially on every attempt
-            $this->message->save();
-            if ($this->message->attempts >= 7) {
-                // after 64 Hours of trying
-                $this->receiver->setEmailToInvalid(false);
-                Log::warning(static::class.':'.__FUNCTION__.': Messages to Receiver '.$this->receiver->getEmail().'('.$this->receiver::class.') could not be sent after '.$this->message->attempts.' attempts.
-                Receiver now set email_invalid_at. : message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '.$t->getMessage().' on line '.$t->getLine());
-            }
-
-            return true;
-        }
-
         return false;
     }
 
@@ -165,25 +143,33 @@ class MainMailHandler implements GroupableMailTypeInterface
             $this->setMessageSent();
             $this->onSuccessfulSent();
         } catch (Throwable $t) {
-            $this->message->error_at = now();
             $this->message->reserved_at = null;
             $this->message->email_error_code = (int) $t->getCode();
 
             if ($t instanceof ReceiverMissingException) {
                 Log::notice(static::class.':'.__FUNCTION__.': Message could not be sent because the receiver is missing, presumably trashed. message_id: '.$this->message->id.' class: '.$this->mailClass());
                 $this->message->email_error = 'Message could not be sent because the receiver is missing, presumably trashed.';
+                $this->message->error_at = now();
                 $this->message->deleted_at = now();
-            } else {
+                $this->message->save();
+            } elseif ($this->isPermanentFailure($t)) {
+                $this->message->failed_at = now();
                 $this->message->email_error = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
-            }
-            $this->message->save();
+                $this->message->save();
 
-            $params = collect(...$this->getMailParameters());
-            $errorHasBeenHandled = $this->onError($t, $params);
+                Log::warning(static::class.':'.__FUNCTION__.': Message permanently failed: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '.$t->getMessage());
+            } else {
+                $this->message->error_at = now();
+                $this->message->email_error = Str::limit(($t->getCode().' : '.$t->getMessage()), 245);
+                $this->message->save();
 
-            if (! $errorHasBeenHandled && $t instanceof ReceiverMissingException === false) {
-                Log::error(static::class.':'.__FUNCTION__.': Messages could not be sent: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '
-                    .$t->getMessage().' on line '.$t->getLine(), ['params' => $params->toArray(), 'trace' => $t->getTrace()]);
+                $params = collect(...$this->getMailParameters());
+                $errorHasBeenHandled = $this->onError($t, $params);
+
+                if (! $errorHasBeenHandled) {
+                    Log::error(static::class.':'.__FUNCTION__.': Messages could not be sent: message_id: '.$this->message->id.' class: '.$this->mailClass().' - Code: '.$t->getCode().' Message: '
+                        .$t->getMessage().' on line '.$t->getLine(), ['params' => $params->toArray(), 'trace' => $t->getTrace()]);
+                }
             }
         }
     }
@@ -203,6 +189,29 @@ class MainMailHandler implements GroupableMailTypeInterface
     public function buildDataBulkMail(): string
     {
         return $this->message->messageType->bulk_message_line;
+    }
+
+    /**
+     * Determine if the failure is permanent and should not be retried.
+     */
+    protected function isPermanentFailure(Throwable $t): bool
+    {
+        $code = (int) $t->getCode();
+
+        // 550: mailbox doesn't exist / unroutable address
+        // 553: mailbox name not allowed
+        // 521: does not accept mail
+        // 556: domain does not accept mail
+        if (in_array($code, [550, 553, 521, 556], true)) {
+            return true;
+        }
+
+        // SES rejection
+        if (Str::contains($t->getMessage(), 'MessageRejected')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

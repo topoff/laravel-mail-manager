@@ -76,6 +76,7 @@ class Message extends Resource
             DateTime::make('Reserved At', 'reserved_at')->nullable()->sortable(),
             DateTime::make('Error At', 'error_at')->nullable()->sortable(),
             DateTime::make('Sent At', 'sent_at')->nullable()->sortable(),
+            DateTime::make('Failed At', 'failed_at')->nullable()->sortable(),
             Number::make('Attempts', 'attempts')->sortable(),
             Number::make('Email Error Code', 'email_error_code')->nullable()->hideFromIndex(),
             Text::make('Email Error', 'email_error')->nullable()->hideFromIndex(),

@@ -59,6 +59,7 @@ class MessageType extends Resource
             Boolean::make('Direct', 'direct')->sortable(),
             Boolean::make('Dev BCC', 'dev_bcc')->sortable(),
             Number::make('Error Stop Send Minutes', 'error_stop_send_minutes')->sortable(),
+            Number::make('Max Retry Attempts', 'max_retry_attempts')->sortable(),
             Boolean::make('Required Sender', 'required_sender')->sortable(),
             Boolean::make('Required Messagable', 'required_messagable')->sortable(),
             Boolean::make('Required Company Id', 'required_company_id')->sortable(),

@@ -120,7 +120,7 @@ class MainBulkMailHandler
     protected function setMessagesToSent(): void
     {
         $messageClass = config('mail-manager.models.message');
-        $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update(['sent_at' => Date::now(), 'error_at' => null]);
+        $messageClass::whereIn('id', $this->messageGroup->pluck('id'))->update(['sent_at' => Date::now(), 'error_at' => null, 'failed_at' => null]);
     }
 
     /**

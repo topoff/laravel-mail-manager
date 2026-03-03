@@ -48,6 +48,7 @@ use Topoff\MailManager\Models\Traits\DateScopesTrait;
  * @property \Illuminate\Support\Carbon|null $reserved_at
  * @property \Illuminate\Support\Carbon|null $error_at
  * @property \Illuminate\Support\Carbon|null $sent_at
+ * @property \Illuminate\Support\Carbon|null $failed_at
  * @property \Illuminate\Support\Carbon|null $tracking_opened_at
  * @property \Illuminate\Support\Carbon|null $tracking_clicked_at
  * @property-read MessageType $messageType
@@ -113,7 +114,7 @@ class Message extends Model
     #[Scope]
     protected function hasErrorAndIsNotSent(Builder $query): Builder
     {
-        return $query->whereNotNull('error_at')->whereNull('sent_at');
+        return $query->whereNotNull('error_at')->whereNull('sent_at')->whereNull('failed_at');
     }
 
     /**
@@ -166,6 +167,7 @@ class Message extends Model
             'reserved_at' => 'datetime',
             'error_at' => 'datetime',
             'sent_at' => 'datetime',
+            'failed_at' => 'datetime',
             'tracking_opened_at' => 'datetime',
             'tracking_clicked_at' => 'datetime',
         ];

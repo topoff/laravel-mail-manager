@@ -145,6 +145,7 @@ class SendMessageJob implements ShouldQueue
         $messageClass::with('messageType')
             ->has('directMessageTypes')
             ->whereNull('sent_at')
+            ->whereNull('failed_at')
             ->whereNull('reserved_at')
             ->whereNull('error_at')
             ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '<', Date::now()))
@@ -166,15 +167,23 @@ class SendMessageJob implements ShouldQueue
         $messageClass = $this->messageModel();
         $messageTable = $this->messageTable();
         $messageTypeTable = $this->messageTypeTable();
+        $driver = (new $messageClass)->getConnection()->getDriverName();
+        $now = Date::now()->toDateTimeString();
 
         $query = $messageClass::with('messageType')
             ->select("$messageTable.*") // necessary because of join, otherwise it overwrites the id with the id from message_types
             ->join($messageTypeTable, "$messageTable.message_type_id", '=', "$messageTypeTable.id")
             ->has('directMessageTypes')
             ->whereNull("$messageTable.sent_at")
+            ->whereNull("$messageTable.failed_at")
+            ->whereRaw("$messageTable.attempts < $messageTypeTable.max_retry_attempts")
             ->where(fn ($query) => $query->whereNull("$messageTable.scheduled_at")->orWhere("$messageTable.scheduled_at", '<', Date::now()))
-            ->where(fn ($query) => $query->whereNull("$messageTable.reserved_at")->orWhere("$messageTable.reserved_at", '<', Date::now()->subHour()))
-            ->where(fn ($query) => $query->whereNull("$messageTable.error_at")->orWhere("$messageTable.error_at", '<', Date::now()->subHour()))
+            ->where(fn ($query) => $query
+                ->whereNull("$messageTable.reserved_at")
+                ->orWhereRaw($this->buildBackoffWhereRaw("$messageTable.reserved_at", "$messageTable.attempts", $driver), [$now]))
+            ->where(fn ($query) => $query
+                ->whereNull("$messageTable.error_at")
+                ->orWhereRaw($this->buildBackoffWhereRaw("$messageTable.error_at", "$messageTable.attempts", $driver), [$now]))
             ->orderBy("$messageTable.id");
 
         $this->applyRetryWindowConstraint($query)
@@ -193,17 +202,26 @@ class SendMessageJob implements ShouldQueue
             ->select("$messageTable.*")
             ->leftJoin($messageTypeTable, "$messageTable.message_type_id", '=', "$messageTypeTable.id")
             ->where(fn (Builder $query) => $query->where("$messageTypeTable.direct", false)->orWhereNull("$messageTypeTable.direct"))
-            ->whereNull("$messageTable.sent_at");
+            ->whereNull("$messageTable.sent_at")
+            ->whereNull("$messageTable.failed_at");
 
         if ($withMessageType) {
             $query->with('messageType');
         }
 
         if ($this->isRetryCallForMessagesWithError) {
+            $driver = (new $messageClass)->getConnection()->getDriverName();
+            $now = Date::now()->toDateTimeString();
+
             $query
+                ->whereRaw("$messageTable.attempts < $messageTypeTable.max_retry_attempts")
                 ->where(fn ($query) => $query->whereNull("$messageTable.scheduled_at")->orWhere("$messageTable.scheduled_at", '<', Date::now()))
-                ->where(fn ($query) => $query->whereNull("$messageTable.reserved_at")->orWhere("$messageTable.reserved_at", '<', Date::now()->subHour()))
-                ->where(fn ($query) => $query->whereNull("$messageTable.error_at")->orWhere("$messageTable.error_at", '<', Date::now()->subHour()));
+                ->where(fn ($query) => $query
+                    ->whereNull("$messageTable.reserved_at")
+                    ->orWhereRaw($this->buildBackoffWhereRaw("$messageTable.reserved_at", "$messageTable.attempts", $driver), [$now]))
+                ->where(fn ($query) => $query
+                    ->whereNull("$messageTable.error_at")
+                    ->orWhereRaw($this->buildBackoffWhereRaw("$messageTable.error_at", "$messageTable.attempts", $driver), [$now]));
 
             return $this->applyRetryWindowConstraint($query);
         }
@@ -266,5 +284,19 @@ class SendMessageJob implements ShouldQueue
 
             $this->throttleForStaging();
         }
+    }
+
+    /**
+     * Build database-specific SQL for exponential backoff check.
+     *
+     * Formula: min(2^(attempts-1) * 15, 960) minutes → 15m, 30m, 1h, 2h, 4h, 8h, 16h (capped)
+     */
+    protected function buildBackoffWhereRaw(string $column, string $attemptsColumn, string $driver): string
+    {
+        return match ($driver) {
+            'sqlite' => "$column < datetime(?, '-' || MIN(CAST(POWER(2, CASE WHEN $attemptsColumn > 0 THEN $attemptsColumn - 1 ELSE 0 END) * 15 AS INTEGER), 960) || ' minutes')",
+            'pgsql' => "$column < ?::timestamp - (LEAST(POW(2, GREATEST($attemptsColumn - 1, 0)) * 15, 960) || ' minutes')::interval",
+            default => "$column < DATE_SUB(?, INTERVAL LEAST(POW(2, GREATEST($attemptsColumn - 1, 0)) * 15, 960) MINUTE)",
+        };
     }
 }

@@ -135,22 +135,128 @@ it('retries error messages when isRetryCall is true', function () {
         'error_stop_send_minutes' => 60 * 24,
     ]);
 
+    // First retry: backoff = min(2^(1-1) * 15, 960) = 15 minutes
     createMessage([
         'receiver_type' => TestReceiver::class,
         'receiver_id' => $this->receiver->id,
         'message_type_id' => $messageType->id,
         'messagable_type' => TestMessagable::class,
         'messagable_id' => $this->messagable->id,
-        'error_at' => now()->subHours(2),
-        'reserved_at' => now()->subHours(2),
+        'error_at' => now()->subMinutes(20),
+        'reserved_at' => now()->subMinutes(20),
         'scheduled_at' => now()->subHours(1),
         'created_at' => now()->subMinutes(30),
+        'attempts' => 1,
     ]);
 
     $job = new SendMessageJob(true);
     $job->handle();
 
     Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+});
+
+it('does not retry permanently failed messages', function () {
+    Date::setTestNow('2025-06-15 12:00:00');
+
+    $messageType = createMessageType([
+        'direct' => true,
+        'error_stop_send_minutes' => 60 * 24,
+    ]);
+
+    createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+        'failed_at' => now()->subHours(2),
+        'created_at' => now()->subMinutes(30),
+        'attempts' => 1,
+    ]);
+
+    $job = new SendMessageJob(true);
+    $job->handle();
+
+    Mail::assertNothingSent();
+});
+
+it('does not retry messages exceeding max_retry_attempts', function () {
+    Date::setTestNow('2025-06-15 12:00:00');
+
+    $messageType = createMessageType([
+        'direct' => true,
+        'error_stop_send_minutes' => 60 * 24,
+        'max_retry_attempts' => 3,
+    ]);
+
+    createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+        'error_at' => now()->subHours(24),
+        'created_at' => now()->subMinutes(30),
+        'attempts' => 3,
+    ]);
+
+    $job = new SendMessageJob(true);
+    $job->handle();
+
+    Mail::assertNothingSent();
+});
+
+it('applies exponential backoff on retries', function () {
+    Date::setTestNow('2025-06-15 12:00:00');
+
+    $messageType = createMessageType([
+        'direct' => true,
+        'error_stop_send_minutes' => 60 * 24,
+    ]);
+
+    // 3rd attempt: backoff = min(2^(3-1) * 15, 960) = 60 minutes
+    // error_at 30 minutes ago → too recent, should NOT be retried
+    createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+        'error_at' => now()->subMinutes(30),
+        'created_at' => now()->subHours(2),
+        'attempts' => 3,
+    ]);
+
+    $job = new SendMessageJob(true);
+    $job->handle();
+
+    Mail::assertNothingSent();
+
+    // Now update error_at to be old enough (> 60 minutes)
+    Message::first()->update(['error_at' => now()->subMinutes(65)]);
+
+    $job = new SendMessageJob(true);
+    $job->handle();
+
+    Mail::assertSent(\Workbench\App\Mail\TestMail::class);
+});
+
+it('does not send permanently failed messages in normal mode', function () {
+    $messageType = createMessageType(['direct' => true]);
+
+    createMessage([
+        'receiver_type' => TestReceiver::class,
+        'receiver_id' => $this->receiver->id,
+        'message_type_id' => $messageType->id,
+        'messagable_type' => TestMessagable::class,
+        'messagable_id' => $this->messagable->id,
+        'failed_at' => now()->subHours(1),
+    ]);
+
+    $job = new SendMessageJob;
+    $job->handle();
+
+    Mail::assertNothingSent();
 });
 
 it('sends indirect messages as single when only one message per group', function () {

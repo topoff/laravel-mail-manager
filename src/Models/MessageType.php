@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property bool $required_params
  * @property string|null $bulk_message_line
  * @property string|null $ses_configuration_set
+ * @property int $max_retry_attempts
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Illuminate\Support\Carbon|null $deleted_at

@@ -34,6 +34,7 @@ class MessagesStatusFilter extends Filter
             'Reserved' => 'reserved_at',
             'Sent' => 'sent_at',
             'Error' => 'error_at',
+            'Failed' => 'failed_at',
         ];
     }
 }

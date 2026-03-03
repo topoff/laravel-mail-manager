@@ -22,21 +22,21 @@ class ResendAsNewMessageAction extends Action
 
         foreach ($models as $message) {
             /** @var Message $message */
-            if ($message->sent_at === null && $message->error_at === null) {
+            if ($message->sent_at === null && $message->error_at === null && $message->failed_at === null) {
                 $skipped++;
 
                 continue;
             }
 
             $resender->resend($message);
-            if ($message->error_at !== null && $message->sent_at === null) {
+            if ($message->sent_at === null && ($message->error_at !== null || $message->failed_at !== null)) {
                 $message->delete(); // To avoid duplicate mails, as these with errors are retried over time
             }
             $queued++;
         }
 
         if ($queued === 0) {
-            return Action::danger('Only messages with sent_at or error_at can be resent as new messages.');
+            return Action::danger('Only messages with sent_at, error_at, or failed_at can be resent as new messages.');
         }
 
         if ($skipped > 0) {

@@ -59,6 +59,7 @@ class TestCase extends Orchestra
                 $table->boolean('direct')->default(false);
                 $table->boolean('dev_bcc')->default(true);
                 $table->unsignedMediumInteger('error_stop_send_minutes')->default(60 * 24 * 3);
+                $table->unsignedTinyInteger('max_retry_attempts')->default(10);
                 $table->boolean('required_sender')->default(false)->index();
                 $table->boolean('required_messagable')->default(false)->index();
                 $table->boolean('required_company_id')->default(false)->index();
@@ -93,6 +94,7 @@ class TestCase extends Orchestra
                 $table->dateTime('reserved_at')->nullable()->index();
                 $table->dateTime('error_at')->nullable()->index();
                 $table->dateTime('sent_at')->nullable();
+                $table->dateTime('failed_at')->nullable();
                 $table->unsignedTinyInteger('attempts')->nullable()->default(0);
                 $table->unsignedSmallInteger('email_error_code')->nullable();
                 $table->string('email_error')->nullable();

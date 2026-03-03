@@ -31,6 +31,7 @@ class MessageResender
             'reserved_at' => null,
             'error_at' => null,
             'sent_at' => null,
+            'failed_at' => null,
             'attempts' => 0,
             'email_error_code' => null,
             'email_error' => null,
