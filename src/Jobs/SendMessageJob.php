@@ -293,10 +293,13 @@ class SendMessageJob implements ShouldQueue
      */
     protected function buildBackoffWhereRaw(string $column, string $attemptsColumn, string $driver): string
     {
+        // Use CASE to avoid unsigned integer underflow when attempts=0 (MySQL computes 0-1 as unsigned before GREATEST can clamp)
+        $safePower = "POWER(2, CASE WHEN $attemptsColumn > 0 THEN $attemptsColumn - 1 ELSE 0 END)";
+
         return match ($driver) {
-            'sqlite' => "$column < datetime(?, '-' || MIN(CAST(POWER(2, CASE WHEN $attemptsColumn > 0 THEN $attemptsColumn - 1 ELSE 0 END) * 15 AS INTEGER), 960) || ' minutes')",
-            'pgsql' => "$column < ?::timestamp - (LEAST(POW(2, GREATEST($attemptsColumn - 1, 0)) * 15, 960) || ' minutes')::interval",
-            default => "$column < DATE_SUB(?, INTERVAL LEAST(POW(2, GREATEST($attemptsColumn - 1, 0)) * 15, 960) MINUTE)",
+            'sqlite' => "$column < datetime(?, '-' || MIN(CAST($safePower * 15 AS INTEGER), 960) || ' minutes')",
+            'pgsql' => "$column < ?::timestamp - (LEAST($safePower * 15, 960) || ' minutes')::interval",
+            default => "$column < DATE_SUB(?, INTERVAL LEAST($safePower * 15, 960) MINUTE)",
         };
     }
 }
