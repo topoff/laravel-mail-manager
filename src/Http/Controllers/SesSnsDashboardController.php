@@ -101,6 +101,7 @@ class SesSnsDashboardController extends Controller
                 ],
             ],
             'custom_mail_action_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail', now()->addMinutes(30)),
+            'bcc_address' => config('mail.bcc.address'),
             'app_config' => [
                 'aws_region' => (string) config('mail-manager.ses_sns.aws.region', ''),
                 'aws_profile' => (string) config('mail-manager.ses_sns.aws.profile', ''),

@@ -169,6 +169,15 @@
         </div>
     </div>
 
+    {{-- BCC Warning --}}
+    @if($bcc_address)
+        <div class="card card-warn">
+            <h2>BCC is Active</h2>
+            <p>All outgoing emails are BCC'd to <code>{{ $bcc_address }}</code>. The BCC recipient shares the same SES message ID as the TO recipient, so SNS tracking events (delivery, bounce, complaint) for the BCC address are filtered out to prevent corrupting the original recipient's tracking data.</p>
+            <p>If the BCC mailbox rejects mail, those bounces will <strong>not</strong> appear in tracking. Monitor the BCC mailbox separately.</p>
+        </div>
+    @endif
+
     {{-- Health Checks --}}
     <div class="grid" id="checks">
         <div class="card">

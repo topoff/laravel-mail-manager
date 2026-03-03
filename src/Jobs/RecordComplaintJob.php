@@ -52,7 +52,7 @@ class RecordComplaintJob implements ShouldQueue
                 $eventRecipients = collect(data_get($this->message, 'complaint.complainedRecipients', []))
                     ->map(fn ($r) => mb_strtolower((string) data_get($r, 'emailAddress', '')));
 
-                if (! $eventRecipients->contains(mb_strtolower($trackedMessage->tracking_recipient_email))) {
+                if (! $eventRecipients->contains(mb_strtolower((string) $trackedMessage->tracking_recipient_email))) {
                     return;
                 }
             }

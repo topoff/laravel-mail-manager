@@ -53,7 +53,7 @@ class RecordBounceJob implements ShouldQueue
                 $eventRecipients = collect(data_get($this->message, 'bounce.bouncedRecipients', []))
                     ->map(fn ($r) => mb_strtolower((string) data_get($r, 'emailAddress', '')));
 
-                if (! $eventRecipients->contains(mb_strtolower($trackedMessage->tracking_recipient_email))) {
+                if (! $eventRecipients->contains(mb_strtolower((string) $trackedMessage->tracking_recipient_email))) {
                     return;
                 }
             }
