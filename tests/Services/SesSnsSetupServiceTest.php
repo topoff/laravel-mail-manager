@@ -11,10 +11,12 @@ it('provisions missing ses/sns resources and returns green status', function () 
         'default' => [
             'configuration_set' => 'mail-manager-tracking',
             'event_destination' => 'mail-manager-sns',
+            'identity' => 'default',
         ],
     ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://mail-manager-demo.ngrok-free.app/email/sns');
     config()->set('mail-manager.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
+    config()->set('mail-manager.ses_sns.tenant.name');
 
     $fake = new class implements SesSnsProvisioningApi
     {
@@ -179,6 +181,7 @@ it('returns failing checks when topic is missing', function () {
         'default' => [
             'configuration_set' => 'mail-manager-tracking',
             'event_destination' => 'mail-manager-sns',
+            'identity' => 'default',
         ],
     ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
@@ -302,6 +305,7 @@ it('tears down existing ses/sns resources', function () {
         'default' => [
             'configuration_set' => 'mail-manager-tracking',
             'event_destination' => 'mail-manager-sns',
+            'identity' => 'default',
         ],
     ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');

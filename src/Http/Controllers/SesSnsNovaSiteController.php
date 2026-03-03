@@ -104,9 +104,7 @@ class SesSnsNovaSiteController extends Controller
             'app_config' => [
                 'aws_region' => (string) config('mail-manager.ses_sns.aws.region', ''),
                 'aws_profile' => (string) config('mail-manager.ses_sns.aws.profile', ''),
-                'sending_identity_domain' => (string) config('mail-manager.ses_sns.sending.identity_domain', ''),
-                'sending_identity_email' => (string) config('mail-manager.ses_sns.sending.identity_email', ''),
-                'sending_mail_from_domain' => (string) config('mail-manager.ses_sns.sending.mail_from_domain', ''),
+                'sending_identities' => (array) config('mail-manager.ses_sns.sending.identities', []),
                 'tracking_configuration_sets' => (array) config('mail-manager.ses_sns.configuration_sets', []),
                 'tracking_topic_name' => (string) config('mail-manager.ses_sns.topic_name', ''),
                 'tracking_topic_arn' => (string) config('mail-manager.ses_sns.topic_arn', ''),

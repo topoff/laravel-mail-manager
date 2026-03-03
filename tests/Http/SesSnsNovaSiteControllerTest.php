@@ -24,12 +24,18 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
         'default' => [
             'configuration_set' => 'mail-manager-tracking',
             'event_destination' => 'mail-manager-sns',
+            'identity' => 'default',
         ],
     ]);
     config()->set('mail-manager.ses_sns.callback_endpoint', 'https://backend.example.test/email/sns');
     config()->set('mail-manager.ses_sns.event_types', ['SEND', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
-    config()->set('mail-manager.ses_sns.sending.identity_domain', 'example.com');
-    config()->set('mail-manager.ses_sns.sending.mail_from_domain', 'mail.example.com');
+    config()->set('mail-manager.ses_sns.sending.identities', [
+        'default' => [
+            'identity_domain' => 'example.com',
+            'mail_from_domain' => 'mail.example.com',
+            'mail_from_address' => 'noreply@example.com',
+        ],
+    ]);
 
     app()->bind(SesSnsProvisioningApi::class, fn (): SesSnsProvisioningApi => new class implements SesSnsProvisioningApi
     {

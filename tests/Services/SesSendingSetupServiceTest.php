@@ -5,13 +5,19 @@ use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
 
 it('creates ses domain identity and returns required dns records', function () {
     config()->set('mail-manager.ses_sns.sending.enabled', true);
-    config()->set('mail-manager.ses_sns.sending.identity_domain', 'example.com');
-    config()->set('mail-manager.ses_sns.sending.mail_from_domain', 'mail.example.com');
+    config()->set('mail-manager.ses_sns.sending.identities', [
+        'default' => [
+            'identity_domain' => 'example.com',
+            'mail_from_domain' => 'mail.example.com',
+            'mail_from_address' => 'noreply@example.com',
+        ],
+    ]);
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
     config()->set('mail-manager.ses_sns.configuration_sets', [
         'default' => [
             'configuration_set' => 'mail-manager-tracking',
             'event_destination' => 'mail-manager-sns',
+            'identity' => 'default',
         ],
     ]);
     config()->set('mail-manager.ses_sns.tenant.name', 'topofferten');
@@ -22,7 +28,7 @@ it('creates ses domain identity and returns required dns records', function () {
 
         public bool $configurationSetExists = false;
 
-        public ?array $assignedConfigurationSet = null;
+        public array $assignedConfigurationSets = [];
 
         public bool $tenantExists = false;
 
@@ -142,7 +148,7 @@ it('creates ses domain identity and returns required dns records', function () {
 
         public function putEmailIdentityConfigurationSetAttributes(string $identity, string $configurationSetName): void
         {
-            $this->assignedConfigurationSet = [
+            $this->assignedConfigurationSets[] = [
                 'identity' => $identity,
                 'configuration_set' => $configurationSetName,
             ];
@@ -162,7 +168,7 @@ it('creates ses domain identity and returns required dns records', function () {
     expect($result['ok'])->toBeTrue()
         ->and(count($result['dns_records']))->toBe(5)
         ->and($fake->configurationSetExists)->toBeTrue()
-        ->and($fake->assignedConfigurationSet)->toBe([
+        ->and($fake->assignedConfigurationSets)->toContain([
             'identity' => 'example.com',
             'configuration_set' => 'mail-manager-tracking',
         ])
@@ -173,9 +179,21 @@ it('creates ses domain identity and returns required dns records', function () {
         );
 });
 
-it('checks if MAIL_FROM_ADDRESS matches ses identity', function () {
-    config()->set('mail-manager.ses_sns.sending.identity_email', 'sender@example.com');
-    config()->set('mail.from.address', 'sender@example.com');
+it('checks if mail_from_address matches ses identity', function () {
+    config()->set('mail-manager.ses_sns.sending.identities', [
+        'default' => [
+            'identity_email' => 'sender@example.com',
+            'mail_from_address' => 'sender@example.com',
+        ],
+    ]);
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'mail-manager-tracking',
+            'event_destination' => 'mail-manager-sns',
+            'identity' => 'default',
+        ],
+    ]);
+    config()->set('mail-manager.ses_sns.tenant.name');
 
     $fake = new class implements SesSnsProvisioningApi
     {

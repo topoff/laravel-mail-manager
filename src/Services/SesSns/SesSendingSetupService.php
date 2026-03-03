@@ -16,39 +16,57 @@ class SesSendingSetupService
     public function setup(): array
     {
         $steps = [];
+        $dnsRecords = [];
+        $identities = $this->identities();
         $configurationSets = $this->configurationSets();
-        $identity = $this->identity();
-        $identityData = $this->api->getEmailIdentity($identity);
 
-        if ($identityData === null) {
-            $identityData = $this->api->createEmailIdentity($identity);
-            $steps[] = ['label' => 'SES identity', 'ok' => true, 'details' => 'Created: '.$identity];
-            $identityData = $this->api->getEmailIdentity($identity) ?? $identityData;
-        } else {
-            $steps[] = ['label' => 'SES identity', 'ok' => true, 'details' => 'Already exists: '.$identity];
-        }
+        // 1. Loop each identity → create SES identity, configure MAIL FROM, build DNS records
+        foreach ($identities as $identityKey => $identityConfig) {
+            $identity = $this->resolveIdentity($identityConfig);
+            $suffix = count($identities) > 1 ? " [{$identityKey}]" : '';
+            $identityData = $this->api->getEmailIdentity($identity);
 
-        $dnsRecords = $this->buildDnsRecords($identity, $identityData);
+            if ($identityData === null) {
+                $identityData = $this->api->createEmailIdentity($identity);
+                $steps[] = ['label' => 'SES identity'.$suffix, 'ok' => true, 'details' => 'Created: '.$identity];
+                $identityData = $this->api->getEmailIdentity($identity) ?? $identityData;
+            } else {
+                $steps[] = ['label' => 'SES identity'.$suffix, 'ok' => true, 'details' => 'Already exists: '.$identity];
+            }
 
-        $mailFromDomain = $this->mailFromDomain();
-        if ($mailFromDomain !== null && $mailFromDomain !== '') {
-            $this->api->putEmailIdentityMailFromAttributes(
-                $identity,
-                $mailFromDomain,
-                $this->mailFromBehaviorOnMxFailure(),
-            );
-            $steps[] = ['label' => 'SES custom MAIL FROM', 'ok' => true, 'details' => 'Configured: '.$mailFromDomain];
-
-            foreach ($this->buildMailFromDnsRecords($mailFromDomain) as $record) {
+            foreach ($this->buildDnsRecords($identity, $identityData) as $record) {
                 $dnsRecords[] = $record;
             }
-        } else {
-            $steps[] = ['label' => 'SES custom MAIL FROM', 'ok' => true, 'details' => 'Skipped (not configured).'];
+
+            $mailFromDomain = trim((string) ($identityConfig['mail_from_domain'] ?? ''));
+            if ($mailFromDomain !== '') {
+                $this->api->putEmailIdentityMailFromAttributes(
+                    $identity,
+                    $mailFromDomain,
+                    $this->mailFromBehaviorOnMxFailure(),
+                );
+                $steps[] = ['label' => 'SES custom MAIL FROM'.$suffix, 'ok' => true, 'details' => 'Configured: '.$mailFromDomain];
+
+                foreach ($this->buildMailFromDnsRecords($mailFromDomain) as $record) {
+                    $dnsRecords[] = $record;
+                }
+            } else {
+                $steps[] = ['label' => 'SES custom MAIL FROM'.$suffix, 'ok' => true, 'details' => 'Skipped (not configured).'];
+            }
+
+            $this->upsertDnsIfConfigured($identity, $dnsRecords, $steps);
+
+            $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
+            $steps[] = [
+                'label' => 'SES verification status'.$suffix,
+                'ok' => true,
+                'details' => $verified
+                    ? 'Identity already verified for sending.'
+                    : 'Identity not yet verified. Apply DNS records and wait for SES verification.',
+            ];
         }
 
-        $this->upsertDnsIfConfigured($identity, $dnsRecords, $steps);
-
-        $defaultConfigSet = null;
+        // 2. Loop each config set → create config set
         foreach ($configurationSets as $key => $set) {
             $configSetName = $set['configuration_set'];
             $suffix = count($configurationSets) > 1 ? " [{$key}]" : '';
@@ -63,29 +81,30 @@ class SesSendingSetupService
             } else {
                 $steps[] = ['label' => 'SES configuration set'.$suffix, 'ok' => true, 'details' => 'Already exists: '.$configSetName];
             }
+        }
 
-            if ($defaultConfigSet === null) {
-                $defaultConfigSet = $configSetName;
+        // 3. Assign default config set per identity
+        $assignedIdentities = [];
+        foreach ($configurationSets as $set) {
+            $configSetName = $set['configuration_set'];
+            $identityKey = $set['identity'] ?? 'default';
+
+            if ($configSetName === '' || isset($assignedIdentities[$identityKey])) {
+                continue;
             }
+
+            if (! isset($identities[$identityKey])) {
+                continue;
+            }
+
+            $identity = $this->resolveIdentity($identities[$identityKey]);
+            $this->api->putEmailIdentityConfigurationSetAttributes($identity, $configSetName);
+            $steps[] = ['label' => 'SES default configuration set ['.$identityKey.']', 'ok' => true, 'details' => 'Assigned '.$configSetName.' to identity: '.$identity];
+            $assignedIdentities[$identityKey] = true;
         }
 
-        if ($defaultConfigSet !== null) {
-            $this->api->putEmailIdentityConfigurationSetAttributes($identity, $defaultConfigSet);
-            $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Assigned to identity: '.$defaultConfigSet];
-        } else {
-            $steps[] = ['label' => 'SES default configuration set', 'ok' => true, 'details' => 'Skipped (not configured).'];
-        }
-
-        $this->associateTenantIfConfigured($identity, $configurationSets, $steps);
-
-        $verified = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
-        $steps[] = [
-            'label' => 'SES verification status',
-            'ok' => true,
-            'details' => $verified
-                ? 'Identity already verified for sending.'
-                : 'Identity not yet verified. Apply DNS records and wait for SES verification.',
-        ];
+        // 4. Tenant associations
+        $this->associateTenantIfConfigured($identities, $configurationSets, $steps);
 
         return [
             'ok' => true,
@@ -100,59 +119,76 @@ class SesSendingSetupService
     public function check(): array
     {
         $checks = [];
+        $dnsRecords = [];
+        $identities = $this->identities();
         $configurationSets = $this->configurationSets();
-        $identity = $this->identity();
-        $identityData = $this->api->getEmailIdentity($identity);
 
-        $this->addCheck(
-            $checks,
-            'identity_exists',
-            'SES identity exists',
-            $identityData !== null,
-            $identity
-        );
+        foreach ($identities as $identityKey => $identityConfig) {
+            $identity = $this->resolveIdentity($identityConfig);
+            $suffix = count($identities) > 1 ? " [{$identityKey}]" : '';
+            $keySuffix = count($identities) > 1 ? "_{$identityKey}" : '';
+            $identityData = $this->api->getEmailIdentity($identity);
 
-        $mailFromAddress = trim((string) config('mail.from.address', ''));
-        if ($mailFromAddress === '') {
             $this->addCheck(
                 $checks,
-                'mail_from_address_matches_identity',
-                'MAIL_FROM_ADDRESS matches SES identity',
-                false,
-                'MAIL_FROM_ADDRESS is empty.'
+                'identity_exists'.$keySuffix,
+                'SES identity exists'.$suffix,
+                $identityData !== null,
+                $identity
             );
-        } else {
-            $mailFromAddressMatchesIdentity = $this->mailFromAddressMatchesIdentity($identity, $mailFromAddress);
+
+            $mailFromAddress = trim((string) ($identityConfig['mail_from_address'] ?? ''));
+            if ($mailFromAddress === '') {
+                $mailFromAddress = trim((string) config('mail.from.address', ''));
+            }
+
+            if ($mailFromAddress === '') {
+                $this->addCheck(
+                    $checks,
+                    'mail_from_address_matches_identity'.$keySuffix,
+                    'mail_from_address matches SES identity'.$suffix,
+                    false,
+                    'mail_from_address is empty.'
+                );
+            } else {
+                $matches = $this->mailFromAddressMatchesIdentity($identity, $mailFromAddress);
+                $this->addCheck(
+                    $checks,
+                    'mail_from_address_matches_identity'.$keySuffix,
+                    'mail_from_address matches SES identity'.$suffix,
+                    $matches,
+                    $matches
+                        ? sprintf('mail_from_address "%s" matches identity "%s".', $mailFromAddress, $identity)
+                        : sprintf('mail_from_address "%s" does not match identity "%s".', $mailFromAddress, $identity)
+                );
+            }
+
+            if ($identityData !== null) {
+                foreach ($this->buildDnsRecords($identity, $identityData) as $record) {
+                    $dnsRecords[] = $record;
+                }
+            }
+
+            $verifiedForSending = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
             $this->addCheck(
                 $checks,
-                'mail_from_address_matches_identity',
-                'MAIL_FROM_ADDRESS matches SES identity',
-                $mailFromAddressMatchesIdentity,
-                $mailFromAddressMatchesIdentity
-                    ? sprintf('MAIL_FROM_ADDRESS "%s" matches identity "%s".', $mailFromAddress, $identity)
-                    : sprintf('MAIL_FROM_ADDRESS "%s" does not match identity "%s".', $mailFromAddress, $identity)
+                'identity_verified'.$keySuffix,
+                'SES identity verified for sending'.$suffix,
+                $verifiedForSending,
+                $verifiedForSending ? 'Verified' : 'Pending verification'
             );
-        }
 
-        $dnsRecords = $identityData !== null ? $this->buildDnsRecords($identity, $identityData) : [];
-        $verifiedForSending = (bool) Arr::get($identityData, 'VerifiedForSendingStatus', false);
-        $this->addCheck(
-            $checks,
-            'identity_verified',
-            'SES identity verified for sending',
-            $verifiedForSending,
-            $verifiedForSending ? 'Verified' : 'Pending verification'
-        );
-
-        if ($this->mailFromDomain()) {
-            $mailFromStatus = (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomainStatus', '');
-            $this->addCheck(
-                $checks,
-                'mail_from_status',
-                'SES MAIL FROM domain status',
-                in_array($mailFromStatus, ['SUCCESS', 'PENDING'], true),
-                $mailFromStatus !== '' ? $mailFromStatus : 'Not set'
-            );
+            $mailFromDomain = trim((string) ($identityConfig['mail_from_domain'] ?? ''));
+            if ($mailFromDomain !== '') {
+                $mailFromStatus = (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomainStatus', '');
+                $this->addCheck(
+                    $checks,
+                    'mail_from_status'.$keySuffix,
+                    'SES MAIL FROM domain status'.$suffix,
+                    in_array($mailFromStatus, ['SUCCESS', 'PENDING'], true),
+                    $mailFromStatus !== '' ? $mailFromStatus : 'Not set'
+                );
+            }
         }
 
         $tenantName = $this->tenantName();
@@ -163,15 +199,22 @@ class SesSendingSetupService
             if ($tenantExists) {
                 $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
                 $accountId = $this->api->getCallerAccountId();
-                $identityArn = sprintf('arn:aws:ses:%s:%s:identity/%s', $region, $accountId, $identity);
-                $identityAssociated = $this->api->tenantHasResourceAssociation($tenantName, $identityArn);
-                $this->addCheck(
-                    $checks,
-                    'tenant_identity_association',
-                    'SES tenant has identity association',
-                    $identityAssociated,
-                    $identityAssociated ? $identityArn : 'Missing association for: '.$identityArn
-                );
+
+                foreach ($identities as $identityKey => $identityConfig) {
+                    $identity = $this->resolveIdentity($identityConfig);
+                    $suffix = count($identities) > 1 ? " [{$identityKey}]" : '';
+                    $keySuffix = count($identities) > 1 ? "_{$identityKey}" : '';
+
+                    $identityArn = sprintf('arn:aws:ses:%s:%s:identity/%s', $region, $accountId, $identity);
+                    $identityAssociated = $this->api->tenantHasResourceAssociation($tenantName, $identityArn);
+                    $this->addCheck(
+                        $checks,
+                        'tenant_identity_association'.$keySuffix,
+                        'SES tenant has identity association'.$suffix,
+                        $identityAssociated,
+                        $identityAssociated ? $identityArn : 'Missing association for: '.$identityArn
+                    );
+                }
 
                 foreach ($configurationSets as $key => $set) {
                     $configSetName = $set['configuration_set'];
@@ -203,7 +246,39 @@ class SesSendingSetupService
     }
 
     /**
-     * @return array<string, array{configuration_set: string, event_destination: string}>
+     * @return array<string, array{identity_domain?: string, mail_from_domain?: string, mail_from_address?: string}>
+     */
+    protected function identities(): array
+    {
+        $identities = (array) config('mail-manager.ses_sns.sending.identities', []);
+
+        if ($identities === []) {
+            throw new RuntimeException('No SES identities configured. Set mail-manager.ses_sns.sending.identities.');
+        }
+
+        return $identities;
+    }
+
+    /**
+     * Resolve the SES identity string (domain or email) from an identity config entry.
+     */
+    protected function resolveIdentity(array $config): string
+    {
+        $domain = trim((string) ($config['identity_domain'] ?? ''));
+        if ($domain !== '') {
+            return $domain;
+        }
+
+        $email = trim((string) ($config['identity_email'] ?? ''));
+        if ($email !== '') {
+            return $email;
+        }
+
+        throw new RuntimeException('Identity entry has no identity_domain or identity_email.');
+    }
+
+    /**
+     * @return array<string, array{configuration_set: string, event_destination: string, identity?: string}>
      */
     protected function configurationSets(): array
     {
@@ -300,22 +375,6 @@ class SesSendingSetupService
         ];
     }
 
-    protected function identity(): string
-    {
-        $domain = trim((string) config('mail-manager.ses_sns.sending.identity_domain', ''));
-        $email = trim((string) config('mail-manager.ses_sns.sending.identity_email', ''));
-
-        if ($domain !== '') {
-            return $domain;
-        }
-
-        if ($email !== '') {
-            return $email;
-        }
-
-        throw new RuntimeException('No SES identity configured. Set mail-manager.ses_sns.sending.identity_domain or identity_email.');
-    }
-
     protected function identityDomainFromIdentity(string $identity): string
     {
         if (str_contains($identity, '@')) {
@@ -340,13 +399,6 @@ class SesSendingSetupService
         return strtolower($mailFromAddressDomain) === strtolower($identity);
     }
 
-    protected function mailFromDomain(): ?string
-    {
-        $value = trim((string) config('mail-manager.ses_sns.sending.mail_from_domain', ''));
-
-        return $value !== '' ? $value : null;
-    }
-
     protected function mailFromBehaviorOnMxFailure(): string
     {
         return (string) config('mail-manager.ses_sns.sending.mail_from_behavior_on_mx_failure', 'USE_DEFAULT_VALUE');
@@ -360,10 +412,11 @@ class SesSendingSetupService
     }
 
     /**
-     * @param  array<string, array{configuration_set: string, event_destination: string}>  $configurationSets
+     * @param  array<string, array{identity_domain?: string, mail_from_domain?: string, mail_from_address?: string}>  $identities
+     * @param  array<string, array{configuration_set: string, event_destination: string, identity?: string}>  $configurationSets
      * @param  array<int, array{label: string, ok: bool, details: string}>  $steps
      */
-    protected function associateTenantIfConfigured(string $identity, array $configurationSets, array &$steps): void
+    protected function associateTenantIfConfigured(array $identities, array $configurationSets, array &$steps): void
     {
         $tenantName = $this->tenantName();
         if ($tenantName === null) {
@@ -381,13 +434,18 @@ class SesSendingSetupService
 
         $region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1');
         $accountId = $this->api->getCallerAccountId();
-        $identityArn = sprintf('arn:aws:ses:%s:%s:identity/%s', $region, $accountId, $identity);
 
-        if (! $this->api->tenantHasResourceAssociation($tenantName, $identityArn)) {
-            $this->api->associateTenantResource($tenantName, $identityArn);
-            $steps[] = ['label' => 'SES tenant identity association', 'ok' => true, 'details' => 'Associated: '.$identityArn];
-        } else {
-            $steps[] = ['label' => 'SES tenant identity association', 'ok' => true, 'details' => 'Already associated: '.$identityArn];
+        foreach ($identities as $identityKey => $identityConfig) {
+            $identity = $this->resolveIdentity($identityConfig);
+            $suffix = count($identities) > 1 ? " [{$identityKey}]" : '';
+            $identityArn = sprintf('arn:aws:ses:%s:%s:identity/%s', $region, $accountId, $identity);
+
+            if (! $this->api->tenantHasResourceAssociation($tenantName, $identityArn)) {
+                $this->api->associateTenantResource($tenantName, $identityArn);
+                $steps[] = ['label' => 'SES tenant identity association'.$suffix, 'ok' => true, 'details' => 'Associated: '.$identityArn];
+            } else {
+                $steps[] = ['label' => 'SES tenant identity association'.$suffix, 'ok' => true, 'details' => 'Already associated: '.$identityArn];
+            }
         }
 
         foreach ($configurationSets as $key => $set) {

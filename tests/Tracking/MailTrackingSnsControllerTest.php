@@ -170,3 +170,40 @@ it('processes eventType payload format from ses with tag map', function () {
 
     Queue::assertNothingPushed();
 });
+
+it('extracts ses_tags from delivery notification into tracking_meta', function () {
+    $message = createMessage([
+        'tracking_message_id' => 'delivery-mid-tags',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Delivery',
+            'mail' => [
+                'messageId' => 'delivery-mid-tags',
+                'tags' => [
+                    'tenant_id' => ['my-tenant'],
+                    'stream' => ['marketing'],
+                    'mail_type' => ['TestMail'],
+                ],
+            ],
+            'delivery' => [
+                'smtpResponse' => '250 Ok',
+                'timestamp' => '2026-01-01T00:00:00Z',
+                'recipients' => ['receiver@example.com'],
+            ],
+        ]),
+    ];
+
+    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+
+    $message->refresh();
+
+    expect(data_get($message->tracking_meta, 'ses_tags'))->toBe([
+        'tenant_id' => 'my-tenant',
+        'stream' => 'marketing',
+        'mail_type' => 'TestMail',
+    ]);
+});

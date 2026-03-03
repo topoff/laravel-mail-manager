@@ -11,10 +11,11 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\MailManager\Events\MessagePermanentBouncedEvent;
 use Topoff\MailManager\Events\MessageTransientBouncedEvent;
+use Topoff\MailManager\Jobs\Concerns\ExtractsSesMessageTags;
 
 class RecordBounceJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $maxExceptions = 3;
 
@@ -57,6 +58,12 @@ class RecordBounceJob implements ShouldQueue
             $meta->put('failures', $failures->toArray());
             $meta->put('success', false);
             $meta->put('sns_message_bounce', $this->message);
+
+            $sesTags = $this->extractSesMessageTags($this->message);
+            if ($sesTags !== []) {
+                $meta->put('ses_tags', $sesTags);
+            }
+
             $trackedMessage->tracking_meta = $meta->toArray();
             $trackedMessage->save();
 

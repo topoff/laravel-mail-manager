@@ -10,10 +10,11 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\MailManager\Events\MessageComplaintEvent;
+use Topoff\MailManager\Jobs\Concerns\ExtractsSesMessageTags;
 
 class RecordComplaintJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $maxExceptions = 3;
 
@@ -57,6 +58,12 @@ class RecordComplaintJob implements ShouldQueue
             }
 
             $meta->put('sns_message_complaint', $this->message);
+
+            $sesTags = $this->extractSesMessageTags($this->message);
+            if ($sesTags !== []) {
+                $meta->put('ses_tags', $sesTags);
+            }
+
             $trackedMessage->tracking_meta = $meta->toArray();
             $trackedMessage->save();
 

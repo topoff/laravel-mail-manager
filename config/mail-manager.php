@@ -165,15 +165,8 @@ return [
             'default' => [
                 'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-tracking',
                 'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-sns',
+                'identity' => 'default',
             ],
-            // 'transactional' => [
-            //     'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-transactional',
-            //     'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-transactional-sns',
-            // ],
-            // 'marketing' => [
-            //     'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-marketing',
-            //     'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-marketing-sns',
-            // ],
         ],
 
         // SNS resources managed by this package.
@@ -198,12 +191,14 @@ return [
         'enable_event_destination' => true,
 
         'sending' => [
-            // Set one of these (domain preferred).
-            'identity_domain' => env('AWS_SES_IDENTITY_DOMAIN'),
-            'identity_email' => env('AWS_SES_IDENTITY_EMAIL'),
+            'identities' => [
+                'default' => [
+                    'identity_domain' => env('AWS_SES_IDENTITY_DOMAIN'),
+                    'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
+                    'mail_from_address' => env('MAIL_FROM_ADDRESS'),
+                ],
+            ],
 
-            // Optional custom MAIL FROM domain (subdomain of identity_domain recommended).
-            'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
             'mail_from_behavior_on_mx_failure' => 'USE_DEFAULT_VALUE',
 
             // Route53 DNS automation for SES records.

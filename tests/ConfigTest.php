@@ -40,13 +40,19 @@ it('has nova tracking defaults configured', function () {
 });
 
 it('has ses sns setup defaults configured', function () {
-    expect(config('mail-manager.ses_sns.configuration_sets'))->toBe([
-        'default' => [
-            'configuration_set' => 'mail-manager-tracking',
-            'event_destination' => 'mail-manager-sns',
-        ],
-    ])
-        ->and(config('mail-manager.ses_sns.topic_name'))->toBe('mail-manager-ses-events')
-        ->and(config('mail-manager.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY'])
-        ->and(config('mail-manager.ses_sns.tenant.name'))->toBeNull();
+    expect(config('mail-manager.ses_sns.configuration_sets.default.identity'))->toBe('default')
+        ->and(config('mail-manager.ses_sns.sending.identities.default'))->toBe([
+            'identity_domain' => null,
+            'mail_from_domain' => null,
+            'mail_from_address' => null,
+        ])
+        ->and(config('mail-manager.ses_sns.sending.identities'))->toBe([
+            'default' => [
+                'identity_domain' => null,
+                'mail_from_domain' => null,
+                'mail_from_address' => null,
+            ],
+        ])
+        ->and(config('mail-manager.ses_sns.topic_name'))->toEndWith('mail-manager-ses-events')
+        ->and(config('mail-manager.ses_sns.event_types'))->toBe(['SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY']);
 });

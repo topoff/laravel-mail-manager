@@ -141,6 +141,11 @@ class TestSesSnsEventsCommand extends Command
             return $value;
         }
 
+        $identityAddress = trim((string) config('mail-manager.ses_sns.sending.identities.default.mail_from_address', ''));
+        if ($identityAddress !== '') {
+            return $identityAddress;
+        }
+
         $configValue = trim((string) config('mail.from.address', ''));
 
         return $configValue !== '' ? $configValue : null;

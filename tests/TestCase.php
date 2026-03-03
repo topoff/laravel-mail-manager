@@ -66,6 +66,7 @@ class TestCase extends Orchestra
                 $table->boolean('required_mail_text')->default(false)->index();
                 $table->boolean('required_params')->default(false)->index();
                 $table->string('bulk_message_line')->nullable();
+                $table->string('ses_configuration_set')->nullable();
                 $table->softDeletes();
                 $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->nullable();

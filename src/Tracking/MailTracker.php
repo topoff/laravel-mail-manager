@@ -38,8 +38,10 @@ class MailTracker
 
             [$html, $mutated] = $this->injectTrackers($message, $hash);
 
-            $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
             $this->injectConfigurationSetHeader($messageModels, $message);
+            $this->injectFromAddressOverride($messageModels, $message);
+            $this->persistTrackingMetadata($messageModels, $message, $hash, $html, $mutated);
+            $this->injectMessageTags($messageModels, $message);
         } catch (\Throwable $e) {
             Log::error('MailTracker: Failed to inject tracking into email, sending without tracking.', [
                 'error' => $e->getMessage(),
@@ -264,6 +266,64 @@ class MailTracker
         }
 
         $message->getHeaders()->addTextHeader('X-SES-CONFIGURATION-SET', $awsName);
+    }
+
+    /**
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function injectFromAddressOverride(Collection $messageModels, Email $message): void
+    {
+        $configSetKey = $messageModels->first()?->messageType?->ses_configuration_set;
+        if (! $configSetKey) {
+            return;
+        }
+
+        $sets = (array) config('mail-manager.ses_sns.configuration_sets', []);
+        $identityKey = $sets[$configSetKey]['identity'] ?? null;
+        if (! $identityKey) {
+            return;
+        }
+
+        $identities = (array) config('mail-manager.ses_sns.sending.identities', []);
+        $mailFromAddress = trim((string) ($identities[$identityKey]['mail_from_address'] ?? ''));
+        if ($mailFromAddress === '') {
+            return;
+        }
+
+        $currentFrom = collect($message->getFrom())->first();
+        $currentName = $currentFrom?->getName() ?? '';
+
+        $message->from(new \Symfony\Component\Mime\Address($mailFromAddress, $currentName));
+    }
+
+    /**
+     * @param  Collection<int, Message>  $messageModels
+     */
+    protected function injectMessageTags(Collection $messageModels, Email $message): void
+    {
+        $configSetKey = $messageModels->first()?->messageType?->ses_configuration_set;
+        if (! $configSetKey) {
+            return;
+        }
+
+        if ($message->getHeaders()->has('X-SES-MESSAGE-TAGS')) {
+            return;
+        }
+
+        $tenantName = trim((string) config('mail-manager.ses_sns.tenant.name', ''));
+        $mailClass = class_basename($messageModels->first()?->messageType->mail_class ?? '');
+
+        $tags = collect([
+            'tenant_id' => $tenantName,
+            'stream' => $configSetKey,
+            'mail_type' => $mailClass,
+        ])->filter(fn (string $v): bool => $v !== '')
+            ->map(fn (string $v, string $k): string => "{$k}={$v}")
+            ->implode(', ');
+
+        if ($tags !== '') {
+            $message->getHeaders()->addTextHeader('X-SES-MESSAGE-TAGS', $tags);
+        }
     }
 
     protected function resolveMessageId(SentMessage $message): ?string

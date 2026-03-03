@@ -10,10 +10,11 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Topoff\MailManager\Events\MessageDeliveredEvent;
+use Topoff\MailManager\Jobs\Concerns\ExtractsSesMessageTags;
 
 class RecordDeliveryJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, ExtractsSesMessageTags, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $maxExceptions = 3;
 
@@ -51,6 +52,12 @@ class RecordDeliveryJob implements ShouldQueue
             $meta->put('success', true);
             $meta->put('delivered_at', data_get($this->message, 'delivery.timestamp'));
             $meta->put('sns_message_delivery', $this->message);
+
+            $sesTags = $this->extractSesMessageTags($this->message);
+            if ($sesTags !== []) {
+                $meta->put('ses_tags', $sesTags);
+            }
+
             $trackedMessage->tracking_meta = $meta->toArray();
             $trackedMessage->save();
 

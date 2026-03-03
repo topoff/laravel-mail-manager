@@ -130,3 +130,123 @@ it('applies the same tracking hash to all grouped messages for bulk sends', func
         ->and($m1->tracking_subject)->toBe('Bulk Tracking Subject')
         ->and($m2->tracking_subject)->toBe('Bulk Tracking Subject');
 });
+
+it('injects X-SES-CONFIGURATION-SET header when messageType has ses_configuration_set', function () {
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'transactional' => [
+            'configuration_set' => 'my-tenant-prod-transactional',
+            'event_destination' => 'my-tenant-prod-transactional-sns',
+            'identity' => 'default',
+        ],
+    ]);
+
+    $messageType = createMessageType(['ses_configuration_set' => 'transactional']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Config Set Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    expect($email->getHeaders()->get('X-SES-CONFIGURATION-SET')?->getBodyAsString())
+        ->toBe('my-tenant-prod-transactional');
+});
+
+it('overrides From address based on identity mapped to config set', function () {
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'outreach' => [
+            'configuration_set' => 'my-tenant-prod-outreach',
+            'event_destination' => 'my-tenant-prod-outreach-sns',
+            'identity' => 'outreach',
+        ],
+    ]);
+    config()->set('mail-manager.ses_sns.sending.identities', [
+        'outreach' => [
+            'identity_domain' => 'connect.example.com',
+            'mail_from_domain' => 'bounce.connect.example.com',
+            'mail_from_address' => 'outreach@connect.example.com',
+        ],
+    ]);
+
+    $messageType = createMessageType(['ses_configuration_set' => 'outreach']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('original@example.com', 'Original Name'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('From Override Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $from = collect($email->getFrom())->first();
+    expect($from->getAddress())->toBe('outreach@connect.example.com')
+        ->and($from->getName())->toBe('Original Name');
+
+    $messageModel->refresh();
+    expect($messageModel->tracking_sender_email)->toBe('outreach@connect.example.com');
+});
+
+it('injects X-SES-MESSAGE-TAGS header with tenant, stream, mail_type', function () {
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'marketing' => [
+            'configuration_set' => 'my-tenant-prod-marketing',
+            'event_destination' => 'my-tenant-prod-marketing-sns',
+            'identity' => 'default',
+        ],
+    ]);
+    config()->set('mail-manager.ses_sns.tenant.name', 'my-tenant-prod-tenant');
+
+    $messageType = createMessageType(['ses_configuration_set' => 'marketing']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('sender@example.com', 'Sender'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('Tags Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $tagsHeader = $email->getHeaders()->get('X-SES-MESSAGE-TAGS')?->getBodyAsString();
+    expect($tagsHeader)->toContain('tenant_id=my-tenant-prod-tenant')
+        ->toContain('stream=marketing')
+        ->toContain('mail_type=TestMail');
+});
+
+it('does not override From when identity has no mail_from_address', function () {
+    config()->set('mail-manager.ses_sns.configuration_sets', [
+        'default' => [
+            'configuration_set' => 'my-tenant-prod-tracking',
+            'event_destination' => 'my-tenant-prod-sns',
+            'identity' => 'default',
+        ],
+    ]);
+    config()->set('mail-manager.ses_sns.sending.identities', [
+        'default' => [
+            'identity_domain' => 'example.com',
+            'mail_from_domain' => 'bounce.example.com',
+        ],
+    ]);
+
+    $messageType = createMessageType(['ses_configuration_set' => 'default']);
+    $messageModel = createMessage(['message_type_id' => $messageType->id]);
+
+    $email = (new Email)
+        ->from(new Address('original@example.com', 'Original Name'))
+        ->to(new Address('receiver@example.com', 'Receiver'))
+        ->subject('No Override Test')
+        ->text('Plain text');
+
+    $event = new MessageSending($email, ['messageModel' => $messageModel]);
+    app(MailTracker::class)->messageSending($event);
+
+    $from = collect($email->getFrom())->first();
+    expect($from->getAddress())->toBe('original@example.com');
+});
