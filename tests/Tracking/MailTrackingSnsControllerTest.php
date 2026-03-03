@@ -207,3 +207,88 @@ it('extracts ses_tags from delivery notification into tracking_meta', function (
         'mail_type' => 'TestMail',
     ]);
 });
+
+it('skips delivery event when recipient does not match tracking_recipient_email', function () {
+    $message = createMessage([
+        'tracking_message_id' => 'delivery-mid-bcc',
+        'tracking_recipient_email' => 'alice@example.com',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Delivery',
+            'mail' => ['messageId' => 'delivery-mid-bcc'],
+            'delivery' => [
+                'smtpResponse' => '250 Ok',
+                'timestamp' => '2026-01-01T00:00:00Z',
+                'recipients' => ['bcc@example.com'],
+            ],
+        ]),
+    ];
+
+    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+
+    $message->refresh();
+
+    expect($message->tracking_meta)->toBeEmpty();
+});
+
+it('skips bounce event when recipient does not match tracking_recipient_email', function () {
+    $message = createMessage([
+        'tracking_message_id' => 'bounce-mid-bcc',
+        'tracking_recipient_email' => 'alice@example.com',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Bounce',
+            'mail' => ['messageId' => 'bounce-mid-bcc'],
+            'bounce' => [
+                'bounceType' => 'Permanent',
+                'bounceSubType' => 'General',
+                'bouncedRecipients' => [
+                    ['emailAddress' => 'bcc@example.com', 'diagnosticCode' => '550 No such user'],
+                ],
+            ],
+        ]),
+    ];
+
+    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+
+    $message->refresh();
+
+    expect($message->tracking_meta)->toBeEmpty();
+});
+
+it('skips complaint event when recipient does not match tracking_recipient_email', function () {
+    $message = createMessage([
+        'tracking_message_id' => 'complaint-mid-bcc',
+        'tracking_recipient_email' => 'alice@example.com',
+        'tracking_meta' => [],
+    ]);
+
+    $payload = [
+        'Type' => 'Notification',
+        'Message' => json_encode([
+            'notificationType' => 'Complaint',
+            'mail' => ['messageId' => 'complaint-mid-bcc'],
+            'complaint' => [
+                'timestamp' => '2026-01-01T01:00:00Z',
+                'complaintFeedbackType' => 'abuse',
+                'complainedRecipients' => [
+                    ['emailAddress' => 'bcc@example.com'],
+                ],
+            ],
+        ]),
+    ];
+
+    $this->postJson(route('mail-manager.tracking.sns'), $payload)->assertOk();
+
+    $message->refresh();
+
+    expect($message->tracking_meta)->toBeEmpty();
+});

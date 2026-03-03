@@ -48,6 +48,16 @@ class RecordBounceJob implements ShouldQueue
         }
 
         $trackedMessages->each(function ($trackedMessage): void {
+            // Skip if this event is for a different recipient (e.g. BCC)
+            if ($trackedMessage->tracking_recipient_email !== null) {
+                $eventRecipients = collect(data_get($this->message, 'bounce.bouncedRecipients', []))
+                    ->map(fn ($r) => mb_strtolower((string) data_get($r, 'emailAddress', '')));
+
+                if (! $eventRecipients->contains(mb_strtolower($trackedMessage->tracking_recipient_email))) {
+                    return;
+                }
+            }
+
             $meta = collect($trackedMessage->tracking_meta ?: []);
             $failures = collect($meta->get('failures', []));
 

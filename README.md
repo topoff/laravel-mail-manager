@@ -54,6 +54,14 @@ php artisan mail-manager:ses-sns:teardown --force
 
 In Nova (`Message Types` resource), use action `Setup SES/SNS Tracking` to run setup and open the status/check page.
 
+### BCC Recipient Filtering
+
+When BCC is added to an email (e.g. via `AddBccToEmailsListener`), both the TO and BCC recipients share the same SES message ID. SNS event notifications (delivery, bounce, complaint) are matched to `Message` records by `tracking_message_id`, so without filtering, events for the BCC recipient would corrupt the original recipient's tracking data (e.g. a BCC bounce setting `success: false` on the original message).
+
+The SNS event jobs (`RecordDeliveryJob`, `RecordBounceJob`, `RecordComplaintJob`) guard against this by comparing the event's recipient email(s) against the message's `tracking_recipient_email`. If they don't match, the event is skipped for that message. This comparison is case-insensitive and null-safe — messages without a `tracking_recipient_email` process all events as before.
+
+`RecordRejectJob` is unaffected since reject notifications carry no per-recipient data.
+
 ### Nova Integration
 
 If Laravel Nova is installed, the package can auto-register a tracked messages resource with preview and resend actions.

@@ -47,6 +47,16 @@ class RecordDeliveryJob implements ShouldQueue
         }
 
         $trackedMessages->each(function ($trackedMessage): void {
+            // Skip if this event is for a different recipient (e.g. BCC)
+            if ($trackedMessage->tracking_recipient_email !== null) {
+                $eventRecipients = collect(data_get($this->message, 'delivery.recipients', []))
+                    ->map(fn ($email) => mb_strtolower((string) $email));
+
+                if (! $eventRecipients->contains(mb_strtolower($trackedMessage->tracking_recipient_email))) {
+                    return;
+                }
+            }
+
             $meta = collect($trackedMessage->tracking_meta ?: []);
             $meta->put('smtpResponse', data_get($this->message, 'delivery.smtpResponse'));
             $meta->put('success', true);
