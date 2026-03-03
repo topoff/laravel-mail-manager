@@ -25,13 +25,13 @@ return [
 
     'cleanup' => [
         // Null disables deletion. Positive integer = delete records older than X months.
-        'messages_delete_after_months' => null,
-        'email_log_delete_after_months' => null,
-        'notification_log_delete_after_months' => null,
+        'messages_delete_after_months' => 24,
+        'email_log_delete_after_months' => 24,
+        'notification_log_delete_after_months' => 24,
 
         // Null disables this cleanup. Positive integer = set messages.tracking_content
         // to null when records are older than X days.
-        'message_tracking_content_null_after_days' => null,
+        'message_tracking_content_null_after_days' => 60,
 
         'schedule' => [
             // Registers package cleanup job in Laravel scheduler.
@@ -163,21 +163,21 @@ return [
         // This can be important for the domain reputation management.
         'configuration_sets' => [
             'default' => [
-                'configuration_set' => 'mail-manager-tracking',
-                'event_destination' => 'mail-manager-sns',
+                'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-tracking',
+                'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-sns',
             ],
             // 'transactional' => [
-            //     'configuration_set' => 'mail-manager-transactional',
-            //     'event_destination' => 'mail-manager-transactional-sns',
+            //     'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-transactional',
+            //     'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-transactional-sns',
             // ],
             // 'marketing' => [
-            //     'configuration_set' => 'mail-manager-marketing',
-            //     'event_destination' => 'mail-manager-marketing-sns',
+            //     'configuration_set' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-marketing',
+            //     'event_destination' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-marketing-sns',
             // ],
         ],
 
         // SNS resources managed by this package.
-        'topic_name' => 'mail-manager-ses-events',
+        'topic_name' => env('APP_TENANT').'-'.env('APP_ENV').'-mail-manager-ses-events',
         'topic_arn' => null,
 
         // If null, route('mail-manager.tracking.sns') is used.
@@ -188,7 +188,7 @@ return [
 
         // Optional SES v2 tenant association for identity/configuration set resources.
         'tenant' => [
-            'name' => null,
+            'name' => env('APP_TENANT').'-'.env('APP_ENV').'-tenant',
         ],
 
         // Automation toggles.
@@ -199,13 +199,11 @@ return [
 
         'sending' => [
             // Set one of these (domain preferred).
-            // Example: 'identity_domain' => 'top-offerten.ch',
-            'identity_domain' => null,
-            // Example: 'identity_email' => 'no-reply@top-offerten.ch',
-            'identity_email' => null,
+            'identity_domain' => env('AWS_SES_IDENTITY_DOMAIN'),
+            'identity_email' => env('AWS_SES_IDENTITY_EMAIL'),
 
             // Optional custom MAIL FROM domain (subdomain of identity_domain recommended).
-            'mail_from_domain' => null,
+            'mail_from_domain' => env('AWS_SES_MAIL_FROM_DOMAIN'),
             'mail_from_behavior_on_mx_failure' => 'USE_DEFAULT_VALUE',
 
             // Route53 DNS automation for SES records.
