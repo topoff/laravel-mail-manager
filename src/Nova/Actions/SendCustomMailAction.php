@@ -16,6 +16,7 @@ use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\Markdown;
+use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Topoff\MailManager\Contracts\MessageReceiverInterface;
@@ -34,6 +35,11 @@ class SendCustomMailAction extends Action
         $markdown = trim((string) $fields->get('markdown'));
         $isPreview = (bool) $fields->get('preview_only');
         $scheduledAt = $this->resolveScheduledAt($fields->get('scheduled_at'));
+        $mailer = $fields->get('mailer');
+
+        if ($mailer) {
+            config(['mail.default' => $mailer]);
+        }
 
         if ($isPreview) {
             $previewKey = 'mail-manager:nova-custom-preview:'.Str::uuid();
@@ -102,6 +108,15 @@ class SendCustomMailAction extends Action
     public function fields(NovaRequest $request): array
     {
         return [
+            Select::make(__('Mailer'), 'mailer')
+                ->options([
+                    'smtp' => 'SMTP',
+                    'ses' => 'SES',
+                ])
+                ->default(config('mail.default'))
+                ->rules('required')
+                ->help(__('Select the mail transport to use for sending.')),
+
             Text::make(__('Subject'), 'subject')
                 ->rules('required', 'string', 'max:180'),
 

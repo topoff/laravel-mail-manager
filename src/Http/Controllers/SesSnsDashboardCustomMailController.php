@@ -28,13 +28,15 @@ class SesSnsDashboardCustomMailController extends Controller
     public function send(Request $request): RedirectResponse
     {
         $payload = $request->validate([
+            'mailer' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('mail.mailers', [])))],
             'email' => ['required', 'email:rfc,dns'],
             'subject' => ['required', 'string', 'max:180'],
             'markdown' => ['required', 'string', 'max:65000'],
         ]);
 
         $message = $this->messageFromPayload($payload);
-        Mail::to($payload['email'])->send(new CustomMessageMail($message));
+        $mailer = $payload['mailer'] ?? config('mail.default');
+        Mail::mailer($mailer)->to($payload['email'])->send(new CustomMessageMail($message));
 
         return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail', now()->addMinutes(30)))
             ->with('mail_manager_custom_mail_result', [

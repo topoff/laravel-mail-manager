@@ -47,6 +47,14 @@
         <form method="POST" action="{{ $send_url }}" class="grid">
             @csrf
             <div>
+                <label for="mailer">Mailer</label>
+                <select id="mailer" name="mailer" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;box-sizing:border-box;background:#fff;">
+                    @foreach(array_keys(config('mail.mailers', [])) as $mailerName)
+                        <option value="{{ $mailerName }}" @selected(old('mailer', config('mail.default')) === $mailerName)>{{ strtoupper($mailerName) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
                 <label for="email">Recipient Email</label>
                 <input id="email" name="email" type="email" value="{{ old('email') }}" required>
             </div>
