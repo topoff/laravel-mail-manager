@@ -115,7 +115,7 @@ class MessageType extends Resource
     {
         return [
             (new PreviewMessageTypeInBrowserAction)->sole()->confirmText('')->confirmButtonText('Preview'),
-            (new OpenSesSnsSiteAction)->standalone()->confirmText('Open the SES/SNS setup site in a new tab?')->confirmButtonText('Open'),
+            (new OpenSesSnsSiteAction)->standalone()->confirmText('Open the SES/SNS dashboard in a new tab?')->confirmButtonText('Open'),
         ];
     }
 }

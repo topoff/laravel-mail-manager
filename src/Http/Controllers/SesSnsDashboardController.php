@@ -9,14 +9,14 @@ use Throwable;
 use Topoff\MailManager\Services\SesSns\SesSendingSetupService;
 use Topoff\MailManager\Services\SesSns\SesSnsSetupService;
 
-class SesSnsNovaSiteController extends Controller
+class SesSnsDashboardController extends Controller
 {
     public function __invoke()
     {
         $tracking = $this->resolveTrackingStatus();
         $sending = $this->resolveSendingStatus();
 
-        return view('mail-manager::ses-sns-site', [
+        return view('mail-manager::ses-sns-dashboard', [
             'tracking' => $tracking,
             'sending' => $sending,
             'routes' => [
@@ -42,65 +42,65 @@ class SesSnsNovaSiteController extends Controller
                 [
                     'label' => 'Setup SES/SNS All',
                     'description' => 'One-shot setup for SES sending, tracking, and tenant associations.',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'setup-all']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'setup-all']),
                 ],
                 [
                     'label' => 'Setup SES Sending',
                     'description' => 'Create/check SES identity and expected DNS records.',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'setup-sending']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'setup-sending']),
                 ],
                 [
                     'label' => 'Check SES Sending',
                     'description' => 'Validate SES sending identity and verification state.',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'check-sending']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'check-sending']),
                 ],
                 [
                     'label' => 'Setup SES/SNS Tracking',
                     'description' => 'Provision SES configuration set + SNS destination/subscription.',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'setup-tracking']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'setup-tracking']),
                 ],
                 [
                     'label' => 'Check SES/SNS Tracking',
                     'description' => 'Validate current SES/SNS tracking setup status.',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'check-tracking']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'check-tracking']),
                 ],
                 [
                     'label' => 'Test Delivery Event',
                     'description' => 'Send SES simulator delivery event (success@simulator.amazonses.com).',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-delivery']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'test-delivery']),
                 ],
                 [
                     'label' => 'Test Bounce Event',
                     'description' => 'Send SES simulator bounce event (bounce@simulator.amazonses.com).',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-bounce']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'test-bounce']),
                 ],
                 [
                     'label' => 'Test Complaint Event',
                     'description' => 'Send SES simulator complaint event (complaint@simulator.amazonses.com).',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-complaint']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'test-complaint']),
                 ],
                 [
                     'label' => 'Test Delivery Event + DB Verify',
                     'description' => 'Send delivery simulator event and verify tracking_meta updates in messages table (test events are processed synchronously in the SNS webhook).',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-delivery-db']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'test-delivery-db']),
                 ],
                 [
                     'label' => 'Test Bounce Event + DB Verify',
                     'description' => 'Send bounce simulator event and verify tracking_meta updates in messages table (test events are processed synchronously in the SNS webhook).',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-bounce-db']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'test-bounce-db']),
                 ],
                 [
                     'label' => 'Test Complaint Event + DB Verify',
                     'description' => 'Send complaint simulator event and verify tracking_meta updates in messages table (test events are processed synchronously in the SNS webhook).',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'test-complaint-db']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'test-complaint-db']),
                 ],
                 [
                     'label' => 'Teardown SES/SNS',
                     'description' => 'Remove SES/SNS tracking resources for cleanup.',
-                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.command', now()->addMinutes(30), ['command' => 'teardown']),
+                    'url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.command', now()->addMinutes(30), ['command' => 'teardown']),
                 ],
             ],
-            'custom_mail_action_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail', now()->addMinutes(30)),
+            'custom_mail_action_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail', now()->addMinutes(30)),
             'app_config' => [
                 'aws_region' => (string) config('mail-manager.ses_sns.aws.region', ''),
                 'aws_profile' => (string) config('mail-manager.ses_sns.aws.profile', ''),

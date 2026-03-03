@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mail Manager SES/SNS Nova Site</title>
+    <title>Mail Manager SES/SNS Dashboard</title>
     <style>
         :root {
             --ok: #0f766e;
@@ -49,7 +49,7 @@
 <body>
 <div class="wrap">
     <div class="card">
-        <h1>Amazon SES + SNS Nova Site</h1>
+        <h1>Amazon SES + SNS Dashboard</h1>
         <p class="meta">One place to setup and verify AWS SES sending + SES/SNS event tracking for a new app.</p>
     </div>
 

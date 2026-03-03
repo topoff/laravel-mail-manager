@@ -14,12 +14,12 @@ class OpenSesSnsSiteAction extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Open SES/SNS Setup Site';
+    public $name = 'Open SES/SNS Dashboard';
 
     public function handle(ActionFields $fields, Collection $models): mixed
     {
         $url = URL::temporarySignedRoute(
-            'mail-manager.ses-sns.site',
+            'mail-manager.ses-sns.dashboard',
             now()->addMinutes(30)
         );
 

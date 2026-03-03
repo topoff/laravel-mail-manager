@@ -11,14 +11,14 @@ use Illuminate\Validation\ValidationException;
 use Topoff\MailManager\Mail\CustomMessageMail;
 use Topoff\MailManager\Models\Message;
 
-class SesSnsNovaCustomMailActionController extends Controller
+class SesSnsDashboardCustomMailController extends Controller
 {
     public function show(Request $request)
     {
         return view('mail-manager::ses-sns-custom-mail-action', [
-            'send_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail.send', now()->addMinutes(30)),
-            'back_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site', now()->addMinutes(30)),
-            'preview_url' => URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail.preview', now()->addMinutes(30)),
+            'send_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail.send', now()->addMinutes(30)),
+            'back_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(30)),
+            'preview_url' => URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail.preview', now()->addMinutes(30)),
         ]);
     }
 
@@ -36,7 +36,7 @@ class SesSnsNovaCustomMailActionController extends Controller
         $message = $this->messageFromPayload($payload);
         Mail::to($payload['email'])->send(new CustomMessageMail($message));
 
-        return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.site.custom-mail', now()->addMinutes(30)))
+        return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.dashboard.custom-mail', now()->addMinutes(30)))
             ->with('mail_manager_custom_mail_result', [
                 'ok' => true,
                 'email' => $payload['email'],

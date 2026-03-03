@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\URL;
 use Throwable;
 
-class SesSnsNovaSiteCommandController extends Controller
+class SesSnsDashboardCommandController extends Controller
 {
     public function __invoke(Request $request, string $command): RedirectResponse
     {
@@ -43,7 +43,7 @@ class SesSnsNovaSiteCommandController extends Controller
             ];
         }
 
-        return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.site', now()->addMinutes(30)))
+        return redirect()->to(URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(30)))
             ->with('mail_manager_ses_sns_command_result', $result);
     }
 

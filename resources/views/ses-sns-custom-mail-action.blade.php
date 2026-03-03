@@ -27,8 +27,8 @@
 <div class="wrap">
     <div class="card">
         <h1>Custom Mail Action</h1>
-        <p>Equivalent to Nova Custom Mail Action, with an additional recipient email field for direct test sending.</p>
-        <a class="btn secondary" href="{{ $back_url }}">Back to SES/SNS Setup Site</a>
+        <p>Send a custom test email, with an additional recipient email field for direct test sending.</p>
+        <a class="btn secondary" href="{{ $back_url }}">Back to SES/SNS Dashboard</a>
     </div>
 
     @if(session()->has('mail_manager_custom_mail_result'))

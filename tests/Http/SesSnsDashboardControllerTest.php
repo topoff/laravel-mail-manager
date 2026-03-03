@@ -3,19 +3,19 @@
 use Illuminate\Support\Facades\URL;
 use Topoff\MailManager\Contracts\SesSnsProvisioningApi;
 
-it('renders the ses sns nova site with setup guidance', function () {
-    $url = URL::temporarySignedRoute('mail-manager.ses-sns.site', now()->addMinutes(10));
+it('renders the ses sns dashboard with setup guidance', function () {
+    $url = URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(10));
 
     $this->get($url)
         ->assertOk()
-        ->assertSee('Amazon SES + SNS Nova Site')
+        ->assertSee('Amazon SES + SNS Dashboard')
         ->assertSee('Setup Commands')
         ->assertSee('mail-manager:ses-sns:setup-sending')
         ->assertSee('mail-manager:ses-sns:setup-tracking')
         ->assertSee('Required Environment Variables');
 });
 
-it('renders healthy sending and tracking checks on the ses sns nova site', function () {
+it('renders healthy sending and tracking checks on the ses sns dashboard', function () {
     config()->set('mail-manager.ses_sns.enabled', true);
     config()->set('mail-manager.ses_sns.sending.enabled', true);
     config()->set('mail-manager.ses_sns.aws.region', 'eu-central-1');
@@ -156,11 +156,11 @@ it('renders healthy sending and tracking checks on the ses sns nova site', funct
         public function upsertRoute53Record(string $hostedZoneId, string $recordName, string $recordType, array $values, int $ttl = 300): void {}
     });
 
-    $url = URL::temporarySignedRoute('mail-manager.ses-sns.site', now()->addMinutes(10));
+    $url = URL::temporarySignedRoute('mail-manager.ses-sns.dashboard', now()->addMinutes(10));
 
     $this->get($url)
         ->assertOk()
-        ->assertSee('Amazon SES + SNS Nova Site')
+        ->assertSee('Amazon SES + SNS Dashboard')
         ->assertSee('Sending Checks (SES)')
         ->assertSee('Tracking Checks (SES/SNS)')
         ->assertSee('SES identity verified for sending')
