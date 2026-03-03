@@ -19,6 +19,7 @@ use Topoff\MailManager\Nova\Filters\MessagesMessageableTypeFilter;
 use Topoff\MailManager\Nova\Filters\MessagesMessageTypeFilter;
 use Topoff\MailManager\Nova\Filters\MessagesReceiverTypeFilter;
 use Topoff\MailManager\Nova\Filters\MessagesStatusFilter;
+use Topoff\MailManager\Nova\Lenses\MessagesByDomainTrackingLens;
 use Topoff\MailManager\Nova\Lenses\MessagesByTypeTrackingLens;
 use Topoff\MailManager\Nova\Lenses\MessagesTrackingLens;
 
@@ -128,6 +129,7 @@ class Message extends Resource
     {
         return [
             new MessagesByTypeTrackingLens,
+            new MessagesByDomainTrackingLens,
             new MessagesTrackingLens,
         ];
     }

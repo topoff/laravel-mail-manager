@@ -49,7 +49,7 @@ class MainBulkMailHandler
             $this->setMessagesToReserved();
 
             foreach ($this->messageGroup as $message) {
-                /** @var GroupableMailTypeInterface|MainMailHandler $mailHandler */
+                /** @var MainMailHandler $mailHandler */
                 $mailHandler = app($message->messageType->single_mail_handler, ['message' => $message]);
                 $this->throwExceptionOnMissingInterface($mailHandler);
                 $handlers[$message->getKey()] = $mailHandler;
