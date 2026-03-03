@@ -121,6 +121,8 @@ class SesSnsDashboardController extends Controller
                 'AWS_DEFAULT_REGION',
                 'AWS_ACCESS_KEY_ID',
                 'AWS_SECRET_ACCESS_KEY',
+                'AWS_SES_IDENTITY_DOMAIN',
+                'AWS_SES_MAIL_FROM_DOMAIN',
                 'MAIL_MAILER',
                 'MAIL_FROM_ADDRESS',
                 'MAIL_FROM_NAME',
