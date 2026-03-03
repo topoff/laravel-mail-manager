@@ -117,12 +117,13 @@ class SesSendingSetupService
     }
 
     /**
-     * @return array{ok: bool, checks: array<int, array{key: string, label: string, ok: bool, details: string}>, dns_records: array<int, array{name: string, type: string, values: array<int, string>}>}
+     * @return array{ok: bool, checks: array<int, array{key: string, label: string, ok: bool, details: string}>, dns_records: array<int, array{name: string, type: string, values: array<int, string>}>, identities_details: array<string, array<string, mixed>>}
      */
     public function check(): array
     {
         $checks = [];
         $dnsRecords = [];
+        $identitiesDetails = [];
         $identities = $this->identities();
         $configurationSets = $this->configurationSets();
 
@@ -166,8 +167,21 @@ class SesSendingSetupService
                 );
             }
 
+            $dkimStatus = (string) Arr::get($identityData, 'DkimAttributes.Status', '');
             if ($identityData !== null) {
                 foreach ($this->buildDnsRecords($identity, $identityData) as $record) {
+                    $record['identity'] = $identity;
+                    $record['status'] = $dkimStatus;
+                    $dnsRecords[] = $record;
+                }
+            }
+
+            $mailFromDomain = trim((string) ($identityConfig['mail_from_domain'] ?? ''));
+            $mailFromStatus = (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomainStatus', '');
+            if ($mailFromDomain !== '') {
+                foreach ($this->buildMailFromDnsRecords($mailFromDomain) as $record) {
+                    $record['identity'] = $identity;
+                    $record['status'] = $mailFromStatus;
                     $dnsRecords[] = $record;
                 }
             }
@@ -181,9 +195,7 @@ class SesSendingSetupService
                 $verifiedForSending ? 'Verified' : 'Pending verification'
             );
 
-            $mailFromDomain = trim((string) ($identityConfig['mail_from_domain'] ?? ''));
             if ($mailFromDomain !== '') {
-                $mailFromStatus = (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomainStatus', '');
                 $this->addCheck(
                     $checks,
                     'mail_from_status'.$keySuffix,
@@ -192,6 +204,41 @@ class SesSendingSetupService
                     $mailFromStatus !== '' ? $mailFromStatus : 'Not set'
                 );
             }
+
+            // Build per-identity detail record
+            $identityDetail = [
+                'identity' => $identity,
+                'dkim' => [
+                    'status' => $dkimStatus,
+                    'signing_enabled' => (bool) Arr::get($identityData, 'DkimAttributes.SigningEnabled', false),
+                    'current_signing_key_length' => (string) Arr::get($identityData, 'DkimAttributes.CurrentSigningKeyLength', ''),
+                    'next_signing_key_length' => (string) Arr::get($identityData, 'DkimAttributes.NextSigningKeyLength', ''),
+                    'last_key_generation_timestamp' => (string) Arr::get($identityData, 'DkimAttributes.LastKeyGenerationTimestamp', ''),
+                    'tokens' => (array) Arr::get($identityData, 'DkimAttributes.Tokens', []),
+                ],
+                'mail_from' => [
+                    'domain' => (string) Arr::get($identityData, 'MailFromAttributes.MailFromDomain', ''),
+                    'status' => $mailFromStatus,
+                    'behavior_on_mx_failure' => (string) Arr::get($identityData, 'MailFromAttributes.BehaviorOnMxFailure', ''),
+                ],
+                'dns_records' => [],
+            ];
+
+            // Attach DKIM CNAME records
+            if ($identityData !== null) {
+                foreach ($this->buildDnsRecords($identity, $identityData) as $record) {
+                    $identityDetail['dns_records'][] = array_merge($record, ['status' => $dkimStatus]);
+                }
+            }
+
+            // Attach MAIL FROM MX/TXT records
+            if ($mailFromDomain !== '') {
+                foreach ($this->buildMailFromDnsRecords($mailFromDomain) as $record) {
+                    $identityDetail['dns_records'][] = array_merge($record, ['status' => $mailFromStatus]);
+                }
+            }
+
+            $identitiesDetails[$identityKey] = $identityDetail;
         }
 
         $tenantName = $this->tenantName();
@@ -245,6 +292,7 @@ class SesSendingSetupService
             'ok' => $ok,
             'checks' => $checks,
             'dns_records' => $dnsRecords,
+            'identities_details' => $identitiesDetails,
         ];
     }
 

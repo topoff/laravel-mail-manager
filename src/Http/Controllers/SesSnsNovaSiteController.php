@@ -149,6 +149,7 @@ class SesSnsNovaSiteController extends Controller
                 'error' => null,
                 'checks' => $status['checks'],
                 'dns_records' => $status['dns_records'],
+                'identities_details' => $status['identities_details'],
             ];
         } catch (Throwable $e) {
             return [
@@ -157,6 +158,7 @@ class SesSnsNovaSiteController extends Controller
                 'error' => $e->getMessage(),
                 'checks' => [],
                 'dns_records' => [],
+                'identities_details' => [],
             ];
         }
     }

@@ -224,21 +224,137 @@
         <h2>Required DNS Records (Sending)</h2>
         <table>
             <tr>
+                <th>Status</th>
                 <th>Type</th>
                 <th>Name</th>
                 <th>Values</th>
+                <th>Identity</th>
             </tr>
             @forelse((array) data_get($sending, 'dns_records', []) as $record)
+                @php($recordStatus = (string) data_get($record, 'status', ''))
                 <tr>
+                    <td>
+                        @if($recordStatus === 'SUCCESS')
+                            <span class="badge ok">{{ $recordStatus }}</span>
+                        @elseif($recordStatus === 'PENDING')
+                            <span class="badge warn">{{ $recordStatus }}</span>
+                        @elseif($recordStatus !== '')
+                            <span class="badge fail">{{ $recordStatus }}</span>
+                        @else
+                            <span class="badge warn">UNKNOWN</span>
+                        @endif
+                    </td>
                     <td><code>{{ data_get($record, 'type') }}</code></td>
                     <td><code>{{ data_get($record, 'name') }}</code></td>
                     <td><code>{{ implode(' | ', (array) data_get($record, 'values', [])) }}</code></td>
+                    <td><code>{{ data_get($record, 'identity', '') }}</code></td>
                 </tr>
             @empty
-                <tr><td colspan="3" class="meta">No DNS records available (configure sending identity first).</td></tr>
+                <tr><td colspan="5" class="meta">No DNS records available (configure sending identity first).</td></tr>
             @endforelse
         </table>
     </div>
+
+    @foreach((array) data_get($sending, 'identities_details', []) as $identityKey => $detail)
+        <div class="card">
+            <h2>Identity Details: <code>{{ data_get($detail, 'identity', $identityKey) }}</code></h2>
+
+            <div class="grid">
+                {{-- DKIM Card --}}
+                <div class="card">
+                    <h3>DKIM</h3>
+                    @php($dkimStatus = (string) data_get($detail, 'dkim.status', ''))
+                    <p>
+                        <strong>Status:</strong>
+                        @if($dkimStatus === 'SUCCESS')
+                            <span class="badge ok">{{ $dkimStatus }}</span>
+                        @elseif($dkimStatus === 'PENDING')
+                            <span class="badge warn">{{ $dkimStatus }}</span>
+                        @elseif($dkimStatus !== '')
+                            <span class="badge fail">{{ $dkimStatus }}</span>
+                        @else
+                            <span class="badge warn">UNKNOWN</span>
+                        @endif
+                    </p>
+                    <p><strong>DKIM signatures:</strong> {{ data_get($detail, 'dkim.signing_enabled') ? 'Enabled' : 'Disabled' }}</p>
+                    @if(data_get($detail, 'dkim.current_signing_key_length'))
+                        <p><strong>Current signing key length:</strong> <code>{{ data_get($detail, 'dkim.current_signing_key_length') }}</code></p>
+                    @endif
+                    @if(data_get($detail, 'dkim.next_signing_key_length'))
+                        <p><strong>Next signing key length:</strong> <code>{{ data_get($detail, 'dkim.next_signing_key_length') }}</code></p>
+                    @endif
+                    @if(data_get($detail, 'dkim.last_key_generation_timestamp'))
+                        <p><strong>Last key generated:</strong> <code>{{ data_get($detail, 'dkim.last_key_generation_timestamp') }}</code></p>
+                    @endif
+
+                    @php($dkimTokens = (array) data_get($detail, 'dkim.tokens', []))
+                    @if(count($dkimTokens) > 0)
+                        <h3 style="margin-top: 12px;">DKIM DNS Records (CNAME)</h3>
+                        <table>
+                            <tr>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Value</th>
+                            </tr>
+                            @php($dkimDomain = str_contains(data_get($detail, 'identity', ''), '@') ? substr(strrchr(data_get($detail, 'identity', ''), '@') ?: '', 1) : data_get($detail, 'identity', ''))
+                            @foreach($dkimTokens as $token)
+                                <tr>
+                                    <td><code>CNAME</code></td>
+                                    <td><code>{{ $token }}._domainkey.{{ $dkimDomain }}</code></td>
+                                    <td><code>{{ $token }}.dkim.amazonses.com</code></td>
+                                </tr>
+                            @endforeach
+                        </table>
+                    @endif
+                </div>
+
+                {{-- MAIL FROM Card --}}
+                <div class="card">
+                    <h3>Custom MAIL FROM Domain</h3>
+                    @php($mfStatus = (string) data_get($detail, 'mail_from.status', ''))
+                    @php($mfDomain = (string) data_get($detail, 'mail_from.domain', ''))
+                    <p>
+                        <strong>Status:</strong>
+                        @if($mfStatus === 'SUCCESS')
+                            <span class="badge ok">{{ $mfStatus }}</span>
+                        @elseif($mfStatus === 'PENDING')
+                            <span class="badge warn">{{ $mfStatus }}</span>
+                        @elseif($mfStatus !== '')
+                            <span class="badge fail">{{ $mfStatus }}</span>
+                        @else
+                            <span class="badge warn">NOT SET</span>
+                        @endif
+                    </p>
+                    <p><strong>MAIL FROM domain:</strong> <code>{{ $mfDomain !== '' ? $mfDomain : '(not configured)' }}</code></p>
+                    @if(data_get($detail, 'mail_from.behavior_on_mx_failure'))
+                        <p><strong>Behavior on MX failure:</strong> <code>{{ data_get($detail, 'mail_from.behavior_on_mx_failure') }}</code></p>
+                    @endif
+
+                    @if($mfDomain !== '')
+                        @php($region = (string) config('mail-manager.ses_sns.aws.region', 'eu-central-1'))
+                        <h3 style="margin-top: 12px;">MAIL FROM DNS Records</h3>
+                        <table>
+                            <tr>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Value</th>
+                            </tr>
+                            <tr>
+                                <td><code>MX</code></td>
+                                <td><code>{{ $mfDomain }}</code></td>
+                                <td><code>10 feedback-smtp.{{ $region }}.amazonses.com</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>TXT</code></td>
+                                <td><code>{{ $mfDomain }}</code></td>
+                                <td><code>"v=spf1 include:amazonses.com -all"</code></td>
+                            </tr>
+                        </table>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endforeach
 
     <div class="grid">
         <div class="card">
